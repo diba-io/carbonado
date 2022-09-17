@@ -14,5 +14,4 @@ bao = "0.12.1"
 ecies = { version = "0.2.2", default-features = false, features = ["pure"] }
 serde = "1"
 snap = "1"
-stens = "0.7.1"
 zfec-rs = "0.1.0"

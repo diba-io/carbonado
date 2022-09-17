@@ -4,16 +4,11 @@ use anyhow::Result;
 use ecies::{decrypt, encrypt};
 use snap::{read::FrameDecoder, write::FrameEncoder};
 
-mod structs;
-mod util;
+pub mod structs;
+pub mod util;
 
 use structs::{DecodeInfo, EncodeInfo};
-
-fn calculate_factor(starting_value: usize, ending_value: usize) -> f32 {
-    let difference = ending_value as f32 - starting_value as f32;
-    let average = starting_value + ending_value;
-    difference / average as f32
-}
+use util::calculate_factor;
 
 /// Encode data into Carbonado format in this order:
 /// snap -> ecies -> bao -> zfec
