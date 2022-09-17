@@ -62,23 +62,23 @@ jobs:
         env:
           RUST_BACKTRACE: 1
 
-  web:
-    runs-on: ubuntu-latest
-    needs: lint-wasm
+  # web:
+  #   runs-on: ubuntu-latest
+  #   needs: lint-wasm
 
-    steps:
-      - uses: actions/checkout@v2
+  #   steps:
+  #     - uses: actions/checkout@v2
 
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
+  #     - uses: actions-rs/toolchain@v1
+  #       with:
+  #         profile: minimal
+  #         toolchain: stable
 
-      - uses: Swatinem/rust-cache@v1
-      - uses: jetli/wasm-pack-action@v0.3.0
+  #     - uses: Swatinem/rust-cache@v1
+  #     - uses: jetli/wasm-pack-action@v0.3.0
 
-      - name: Add wasm32 target
-        run: rustup target add wasm32-unknown-unknown
+  #     - name: Add wasm32 target
+  #       run: rustup target add wasm32-unknown-unknown
 
-      - name: Test
-        run: wasm-pack test --headless --chrome
+  #     - name: Test
+  #       run: wasm-pack test --headless --chrome

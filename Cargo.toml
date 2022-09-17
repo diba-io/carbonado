@@ -11,7 +11,12 @@ repository = "https://github.com/diba-io/carbonado.git"
 [dependencies]
 anyhow = "1"
 bao = "0.12.1"
-ecies = { version = "0.2.2", default-features = false, features = ["pure"] }
+ecies = { version = "0.2.3", default-features = false, features = [
+    "pure",
+], git = "https://github.com/ecies/rs.git", rev = "6fe2c39fcfd43d1274a0fd32bc422888f7db9ac8" }
 serde = "1"
 snap = "1"
 zfec-rs = "0.1.0"
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"

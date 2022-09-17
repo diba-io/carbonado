@@ -3,6 +3,8 @@ use std::fs::read;
 use anyhow::Result;
 use carbonado::{decode, encode};
 use ecies::utils::generate_keypair;
+use wasm_bindgen_test::wasm_bindgen_test;
+wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
 #[test]
 fn contract() -> Result<()> {
@@ -18,6 +20,24 @@ fn content() -> Result<()> {
 
 #[test]
 fn code() -> Result<()> {
+    codec("tests/samples/code.tar")?;
+    Ok(())
+}
+
+#[wasm_bindgen_test]
+fn wasm_contract() -> Result<()> {
+    codec("tests/samples/contract.rgbc")?;
+    Ok(())
+}
+
+#[wasm_bindgen_test]
+fn wasm_content() -> Result<()> {
+    codec("tests/samples/content.png")?;
+    Ok(())
+}
+
+#[wasm_bindgen_test]
+fn wasm_code() -> Result<()> {
     codec("tests/samples/code.tar")?;
     Ok(())
 }
