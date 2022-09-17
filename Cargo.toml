@@ -1,0 +1,12 @@
+[package]
+name = "carbonado"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[dependencies]
+anyhow = "1.0.65"
+bao = "0.12.1"
+ecies = { version = "0.2.2", default-features = false, features = ["pure"] }
+snap = "1.0.5"
+stens = "0.7.1"
