@@ -1,3 +1,4 @@
+#![allow(unused_variables)]
 use anyhow::Result;
 
 mod structs;

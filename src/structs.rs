@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 pub struct EncodeInfo {
     bytes_raw: usize,
     bytes_compressed: usize, // snappy
