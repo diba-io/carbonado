@@ -11,10 +11,8 @@ pub struct EncodeInfo {
     pub amplification_factor: f32,
 }
 
-#[allow(dead_code)]
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct DecodeInfo {
     pub fec_errors: usize,
     pub slices: usize,
-    // pub hash: bao::Hash,
 }
