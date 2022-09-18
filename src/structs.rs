@@ -10,9 +10,3 @@ pub struct EncodeInfo {
     pub compression_factor: f32,
     pub amplification_factor: f32,
 }
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct DecodeInfo {
-    pub fec_errors: usize,
-    pub slices: usize,
-}

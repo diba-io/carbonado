@@ -43,9 +43,9 @@ fn wasm_code() -> Result<()> {
 }
 
 fn codec(path: &str) -> Result<()> {
-    let mut input = read(path)?;
+    let input = read(path)?;
     let (privkey, pubkey) = generate_keypair();
-    let (encoded, hash, encode_info) = encode(&pubkey.serialize(), &mut input)?;
+    let (encoded, hash, padding, encode_info) = encode(&pubkey.serialize(), &input)?;
     println!("{encode_info:#?}");
     assert_eq!(
         encoded.len(),
@@ -55,8 +55,7 @@ fn codec(path: &str) -> Result<()> {
     let index = 0;
     let slice = extract_slice(&encoded, index)?;
     verify_stream(hash.as_bytes(), &slice, index)?;
-    let (decoded, decode_info) = decode(&privkey.serialize(), hash.as_bytes(), &encoded)?;
-    println!("{decode_info:#?}");
+    let decoded = decode(&privkey.serialize(), hash.as_bytes(), &encoded, padding)?;
     assert_eq!(decoded, input, "Decoded output is same as encoded input");
     Ok(())
 }
