@@ -1,6 +1,6 @@
 [package]
 name = "carbonado"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2021"
 license = "MIT"
 description = "An apocalypse-resistant data storage format for the truly paranoid."
@@ -11,9 +11,7 @@ repository = "https://github.com/diba-io/carbonado.git"
 [dependencies]
 anyhow = "1"
 bao = "0.12.1"
-ecies = { version = "0.2.3", default-features = false, features = [
-    "pure",
-], git = "https://github.com/ecies/rs.git", rev = "6fe2c39fcfd43d1274a0fd32bc422888f7db9ac8" }
+ecies = { version = "0.2.2", default-features = false, features = ["pure"] }
 serde = "1"
 snap = "1"
 zfec-rs = "0.1.0"
