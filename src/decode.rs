@@ -1,23 +1,27 @@
 use std::io::Read;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use bao::decode::{decode as bao_decode, SliceDecoder};
 use ecies::decrypt;
+use log::debug;
 use snap::read::FrameDecoder;
 use zfec_rs::{Chunk, Fec};
 
-use crate::constants::{FEC_K, FEC_M, SLICE_LEN};
-use crate::util::decode_bao_hash;
+use crate::{
+    constants::{FEC_K, FEC_M, SLICE_LEN},
+    util::decode_bao_hash,
+};
 
 /// Zfec forward error correction decoding
 pub fn zfec(input: &[u8], padding: usize) -> Result<Vec<u8>> {
     let bytes_input = input.len();
-    assert_eq!(
-        bytes_input % FEC_M,
-        0,
-        "Input bytes must divide evenly over number of chunks"
-    );
+    if bytes_input % FEC_M != 0 {
+        return Err(anyhow!(
+            "Input bytes must divide evenly over number of chunks"
+        ));
+    }
     let chunk_size = bytes_input / FEC_M;
+    debug!("Using a chunk size of {chunk_size}");
     let fec = Fec::new(FEC_K, FEC_M)?;
     let mut chunks = vec![];
     for (i, chunk) in input.chunks_exact(chunk_size).enumerate() {

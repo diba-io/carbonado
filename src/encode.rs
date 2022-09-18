@@ -9,9 +9,12 @@ use ecies::encrypt;
 use snap::write::FrameEncoder;
 use zfec_rs::Fec;
 
-use crate::constants::{FEC_K, FEC_M, SLICE_LEN};
-use crate::structs::EncodeInfo;
-use crate::util::calculate_factor;
+use crate::{
+    constants::{FEC_K, FEC_M, SLICE_LEN},
+    decode,
+    structs::EncodeInfo,
+    util::calculate_factor,
+};
 
 /// Snappy compression
 pub fn snap(input: &[u8]) -> Result<Vec<u8>> {
@@ -90,9 +93,10 @@ pub fn encode(pubkey: &[u8], input: &[u8]) -> Result<(Vec<u8>, Hash, usize, Enco
 }
 
 /// Extract a 1KB slice of a Bao stream at a specific index, after decoding it from zfec
-pub fn extract_slice(encoded: &[u8], index: u64) -> Result<Vec<u8>> {
+pub fn extract_slice(encoded: &[u8], index: u64, padding: usize) -> Result<Vec<u8>> {
+    let streamed = decode::zfec(encoded, padding)?;
     let slice_start = index * SLICE_LEN;
-    let encoded_cursor = std::io::Cursor::new(&encoded);
+    let encoded_cursor = std::io::Cursor::new(&streamed);
     let mut extractor = SliceExtractor::new(encoded_cursor, slice_start, SLICE_LEN);
     let mut slice = Vec::new();
     extractor.read_to_end(&mut slice)?;

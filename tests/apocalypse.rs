@@ -1,12 +1,14 @@
 use std::fs::read;
 
 use anyhow::Result;
-use carbonado::{encode, scrub};
+use carbonado::{encode, scrub, util::init_logging};
 use ecies::utils::generate_keypair;
 wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
 #[test]
 fn contract() -> Result<()> {
+    init_logging();
+
     act_of_god("tests/samples/contract.rgbc")?;
 
     Ok(())
@@ -24,18 +26,17 @@ fn act_of_god(path: &str) -> Result<()> {
         "Return error when there's no need to scrub"
     );
 
-    new_encoded[0] ^= 127;
+    new_encoded[0] ^= 64; // ⚡️
 
     let new_result = scrub(&new_encoded, padding);
     assert!(
         new_result.is_ok(),
         "Returns ok when there was a need to scrub"
     );
-    // TODO: figure out why scrubbing isn't working
-    // assert_eq!(
-    //     new_result?, orig_encoded,
-    //     "Original and scrubbed data are the same"
-    // );
+    assert_eq!(
+        new_result?, orig_encoded,
+        "Original and scrubbed data are the same"
+    );
 
     Ok(())
 }
