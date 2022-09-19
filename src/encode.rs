@@ -1,17 +1,14 @@
-use std::io::{Read, Write};
+use std::io::Write;
 
 use anyhow::Result;
-use bao::{
-    encode::{encode as bao_encode, SliceExtractor},
-    Hash,
-};
+use bao::{encode::encode as bao_encode, Hash};
 use ecies::encrypt;
+use log::debug;
 use snap::write::FrameEncoder;
 use zfec_rs::Fec;
 
 use crate::{
     constants::{FEC_K, FEC_M, SLICE_LEN},
-    decode,
     structs::EncodeInfo,
     util::calculate_factor,
 };
@@ -43,15 +40,37 @@ pub fn bao(encrypted: &[u8]) -> Result<(Vec<u8>, Hash)> {
 
 /// Zfec forward error correction encoding
 pub fn zfec(streamed: &[u8]) -> Result<(Vec<u8>, usize)> {
+    // Calculate padding (find a length that divides evenly both by Zfec FEC_K and Bao SLICE_LEN, then find the difference)
+    let streamed_len = streamed.len();
+    let overlap_constant = SLICE_LEN as usize * FEC_M;
+    let target_size = streamed_len - (streamed_len % overlap_constant) + overlap_constant as usize;
+    let padding_len = target_size - streamed_len;
+    let chunk_size = target_size / FEC_K;
+    // TODO: CSPRNG padding
+    let mut padding_bytes = vec![0u8; padding_len];
+    debug!("Carbonado padding: {padding_len}, Chunk Size: {chunk_size}");
+    let mut padded_streamed = Vec::from(streamed);
+    padded_streamed.append(&mut padding_bytes);
+    debug!(
+        "After padding has been added, input is now: {} bytes",
+        padded_streamed.len()
+    );
+
     let fec = Fec::new(FEC_K, FEC_M)?;
-    let (mut encoded_chunks, padding) = fec.encode(streamed)?;
+    let (mut encoded_chunks, zfec_padding) = fec.encode(&padded_streamed)?;
+
+    assert_eq!(
+        zfec_padding, 0,
+        "Padding from Zfec should always be zero, since Carbonado adds its own padding. Padding was: {zfec_padding}"
+    );
+
     let mut encoded = vec![];
 
     for chunk in &mut encoded_chunks {
         encoded.append(&mut chunk.data);
     }
 
-    Ok((encoded, padding))
+    Ok((encoded, padding_len))
 }
 
 /// Encode data into Carbonado format in this order:
@@ -90,16 +109,4 @@ pub fn encode(pubkey: &[u8], input: &[u8]) -> Result<(Vec<u8>, Hash, usize, Enco
             amplification_factor,
         },
     ))
-}
-
-/// Extract a 1KB slice of a Bao stream at a specific index, after decoding it from zfec
-pub fn extract_slice(encoded: &[u8], index: u64, padding: usize) -> Result<Vec<u8>> {
-    let streamed = decode::zfec(encoded, padding)?;
-    let slice_start = index * SLICE_LEN;
-    let encoded_cursor = std::io::Cursor::new(&streamed);
-    let mut extractor = SliceExtractor::new(encoded_cursor, slice_start, SLICE_LEN);
-    let mut slice = Vec::new();
-    extractor.read_to_end(&mut slice)?;
-
-    Ok(slice)
 }

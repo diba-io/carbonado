@@ -1,12 +1,12 @@
 use std::fs::read;
 
 use anyhow::Result;
-use carbonado::{decode, encode, extract_slice, util::init_logging, verify_stream};
+use carbonado::{decode, encode, extract_slice, util::init_logging, verify_slices};
 use ecies::utils::generate_keypair;
 use log::{debug, info};
-use wasm_bindgen_test::wasm_bindgen_test;
+use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
-wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
+wasm_bindgen_test_configure!(run_in_browser);
 
 #[test]
 fn contract() -> Result<()> {
@@ -68,19 +68,22 @@ fn codec(path: &str) -> Result<()> {
         "Length of encoded bytes matches bytes_encoded field"
     );
 
-    let index = 0;
-    info!("Extracting slice at index: {index}...");
-    let slice = extract_slice(&encoded, index, padding)?;
+    let offset = 0;
+    info!("Extracting slice at offset: {offset}...");
+    let slice = extract_slice(&encoded, offset, padding)?;
 
     info!("Verifying stream against hash: {hash}...");
-    verify_stream(hash.as_bytes(), &slice, index)?;
+    verify_slices(&hash, &slice, offset, 1)?;
 
     let decoded = decode(&privkey.serialize(), hash.as_bytes(), &encoded, padding)?;
     assert_eq!(decoded, input, "Decoded output is same as encoded input");
 
     encoded[0] ^= 64; // ⚡️
-    let slice = extract_slice(&encoded, index, padding)?;
-    verify_stream(hash.as_bytes(), &slice, index)?;
+    let slice = extract_slice(&encoded, offset, padding)?;
+    info!("Verifying modified stream against hash: {hash}...");
+    verify_slices(&hash, &slice, offset, 1)?;
+
+    info!("All good!");
 
     Ok(())
 }
