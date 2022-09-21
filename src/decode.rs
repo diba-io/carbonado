@@ -3,18 +3,19 @@ use std::io::{Cursor, Read};
 use anyhow::{anyhow, Result};
 use bao::{
     decode::{decode as bao_decode, SliceDecoder},
-    encode::{encoded_size, SliceExtractor},
+    encode::SliceExtractor,
     Hash,
 };
+use combination::combine;
 use ecies::decrypt;
-use log::{debug, warn};
+use log::{debug, error, warn};
 use snap::read::FrameDecoder;
 use zfec_rs::{Chunk, Fec};
 
 use crate::{
     constants::{FEC_K, FEC_M, SLICE_LEN},
     encode,
-    util::decode_bao_hash,
+    utils::decode_bao_hash,
 };
 
 /// Zfec forward error correction decoding
@@ -84,82 +85,74 @@ pub fn extract_slice(encoded: &[u8], index: u64, padding: usize) -> Result<Vec<u
 }
 
 /// Verify a number of 1KB slices of a Bao stream starting at a specific index
-pub fn verify_slices(hash: &Hash, slice: &[u8], index: u64, count: u64) -> Result<()> {
+pub fn verify_slices(hash: &Hash, streamed: &[u8], index: u64, count: u64) -> Result<()> {
     let slice_start = index * SLICE_LEN;
     let slice_len = count * SLICE_LEN;
-    let mut decoder = SliceDecoder::new(slice, hash, slice_start, slice_len);
+
+    let encoded_cursor = Cursor::new(&streamed);
+    let mut extractor = SliceExtractor::new(encoded_cursor, slice_start, slice_len);
+    let mut slice = Vec::new();
+    extractor.read_to_end(&mut slice)?;
+
+    let mut decoder = SliceDecoder::new(&*slice, hash, slice_start, slice_len);
     let mut decoded = vec![];
     decoder.read_to_end(&mut decoded)?;
 
     Ok(())
 }
 
-// /// Verify a Bao stream at a specific start and len
-// pub fn verify_stream(hash: Hash, input: &[u8], start: u64, len: u64) -> Result<()> {
-//     let mut decoder = SliceDecoder::new(input, &hash, start, len);
-//     let mut decoded = vec![];
-//     decoder.read_to_end(&mut decoded)?;
-
-//     Ok(())
-// }
-
 /// Scrub zfec-encoded data, correcting flipped bits using error correction codes
+/// Returns an error when either valid data cannot be provided, or data is already valid
 pub fn scrub(input: &[u8], padding: usize, hash: &[u8]) -> Result<Vec<u8>> {
     let hash = decode_bao_hash(hash)?;
     let streamed = zfec(input, padding)?;
+    match bao_decode(streamed, &hash) {
+        Ok(_decoded) => Err(anyhow!("Data does not need to be scrubbed.")),
+        Err(e) => {
+            warn!("At least one chunk was bad. Error was: {e}. Trying combinations...");
 
-    let zfec_bytes = input.len();
-    if zfec_bytes % FEC_M != 0 {
-        return Err(anyhow!(
-            "Zfec bytes must divide evenly over number of chunks. Remainder: {}",
-            zfec_bytes % FEC_M
-        ));
-    }
-    let zfec_chunk_size = zfec_bytes / FEC_M;
-    debug!("Using a zfec chunk size of {zfec_chunk_size}");
-
-    let bao_bytes = streamed.len();
-    let bao_slices = bao_bytes as f64 / encoded_size(SLICE_LEN as u64) as f64 / FEC_M as f64;
-    debug!("Using {bao_slices} slices for {bao_bytes} Bao bytes");
-
-    let fec = Fec::new(FEC_K, FEC_M)?;
-    let mut chunks = vec![];
-
-    for (i, chunk) in input.chunks_exact(zfec_chunk_size).enumerate() {
-        let i_f = i as f64;
-        debug!(
-            "Verifying slices between indexes {} and {}",
-            (i_f * bao_slices).round(),
-            (i_f * bao_slices).round() + bao_slices.ceil(),
-        );
-        match verify_slices(
-            &hash,
-            &streamed,
-            (i_f * bao_slices).round() as u64,
-            bao_slices.ceil() as u64,
-        ) {
-            Ok(_) => {
-                chunks.push(Chunk::new(chunk.to_vec(), i));
+            let zfec_bytes = input.len();
+            let zfec_chunk_size = zfec_bytes / FEC_M;
+            if zfec_bytes % FEC_M != 0 {
+                return Err(anyhow!(
+                    "Zfec bytes must divide evenly over number of chunks. Remainder: {zfec_chunk_size}"
+                ));
             }
-            Err(e) => {
-                warn!("Chunk {i} was bad, omitting. Error was: {e}");
-                continue;
+            debug!("Using a zfec chunk size of {zfec_chunk_size}");
+
+            let m_chunks: Vec<&[u8]> = input.chunks(zfec_chunk_size).collect();
+            let mut combos = 0;
+
+            for m in FEC_K..FEC_M - 1 {
+                let range: Vec<usize> = (0..FEC_M).collect();
+                for chunk_indices in combine::from_vec_at(&range, m) {
+                    debug!("Trying chunk indices: {chunk_indices:?}");
+                    combos += 1;
+                    let mut k_chunks = vec![];
+                    for i in chunk_indices {
+                        let chunk = m_chunks[i];
+                        k_chunks.push(Chunk::new(chunk.to_vec(), i));
+                    }
+                    let fec = Fec::new(FEC_K, FEC_M)?;
+                    let decoded = fec.decode(&k_chunks, padding)?;
+                    match bao_decode(&decoded, &hash) {
+                        Ok(_) => {
+                            let (scrubbed, scrubbed_padding) = encode::zfec(&decoded)?;
+                            assert_eq!(
+                                padding, scrubbed_padding,
+                                "Same amount of padding should be added for the same data"
+                            );
+                            return Ok(scrubbed);
+                        }
+                        Err(_) => continue,
+                    }
+                }
+                debug!("Trying one fewer chunk index...");
             }
+            error!("Tried {combos} chunk index combinations and failed to find one that repaired the provided data.");
+            Err(anyhow!(
+                "Tried {combos} chunk index combinations and failed to find one that repaired the provided data."
+            ))
         }
-    }
-
-    if chunks.len() < FEC_K {
-        return Err(anyhow!(
-            "Error decoding Zfec encoding. There should always be at least {FEC_K} valid chunks of {FEC_M} total chunks, but instead there were {}", chunks.len()
-        ));
-    }
-
-    let decoded = fec.decode(&chunks, padding)?;
-    let (scrubbed, _pos) = encode::zfec(&decoded)?;
-
-    if input == scrubbed {
-        Err(anyhow!("Data does not need to be scrubbed."))
-    } else {
-        Ok(scrubbed)
     }
 }

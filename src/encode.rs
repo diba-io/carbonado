@@ -10,7 +10,6 @@ use zfec_rs::Fec;
 use crate::{
     constants::{FEC_K, FEC_M, SLICE_LEN},
     structs::EncodeInfo,
-    util::calculate_factor,
 };
 
 /// Snappy compression
@@ -92,8 +91,8 @@ pub fn encode(pubkey: &[u8], input: &[u8]) -> Result<(Vec<u8>, Hash, usize, Enco
     let bytes_encoded = encoded.len();
 
     // Calculate totals
-    let compression_factor = calculate_factor(bytes_input, bytes_compressed);
-    let amplification_factor = calculate_factor(bytes_input, bytes_encoded);
+    let compression_factor = bytes_compressed as f32 / bytes_input as f32;
+    let amplification_factor = bytes_encoded as f32 / bytes_input as f32;
 
     Ok((
         encoded,

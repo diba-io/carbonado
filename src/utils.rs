@@ -1,12 +1,6 @@
 use anyhow::Result;
 use bao::Hash;
 
-pub fn calculate_factor(starting_value: usize, ending_value: usize) -> f32 {
-    let starting_value = starting_value as f32;
-    let ending_value = ending_value as f32;
-    (ending_value - starting_value) / ending_value
-}
-
 pub fn decode_bao_hash(hash: &[u8]) -> Result<Hash> {
     let hash_array: [u8; bao::HASH_SIZE] = hash[..].try_into()?;
 

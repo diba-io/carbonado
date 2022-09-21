@@ -1,7 +1,7 @@
 use std::fs::read;
 
 use anyhow::Result;
-use carbonado::{decode, encode, extract_slice, util::init_logging, verify_slices};
+use carbonado::{decode, encode, extract_slice, utils::init_logging, verify_slices};
 use ecies::utils::generate_keypair;
 use log::{debug, info};
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
@@ -59,7 +59,7 @@ fn codec(path: &str) -> Result<()> {
     let (privkey, pubkey) = generate_keypair();
 
     info!("Encoding {path}...");
-    let (mut encoded, hash, padding, encode_info) = encode(&pubkey.serialize(), &input)?;
+    let (encoded, hash, padding, encode_info) = encode(&pubkey.serialize(), &input)?;
 
     debug!("Padding was {padding}. Encoding Info: {encode_info:#?}");
     assert_eq!(
@@ -77,11 +77,6 @@ fn codec(path: &str) -> Result<()> {
 
     let decoded = decode(&privkey.serialize(), hash.as_bytes(), &encoded, padding)?;
     assert_eq!(decoded, input, "Decoded output is same as encoded input");
-
-    encoded[0] ^= 64; // ⚡️
-    let slice = extract_slice(&encoded, offset, padding)?;
-    info!("Verifying modified stream against hash: {hash}...");
-    verify_slices(&hash, &slice, offset, 1)?;
 
     info!("All good!");
 

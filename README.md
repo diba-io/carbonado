@@ -60,3 +60,13 @@ Carbonado uses Bao stream verification based on the performant [Blake3 hash algo
 ### Storm
 
 Storm is great, but it has a file size limit of 16MB, and while files can be split into chunks, they're stored directly in an embedded database, and not in flat files. Ideally, Carbonado would be used in conjunction with Storm.
+
+## Error correction
+
+Some decisions were made in how error correction is handled. A chunking forward error correction algorithm was used, called Zfec, which is used in [Tahoe-LAFS](https://tahoe-lafs.org/trac/tahoe-lafs). Similar to how RAID 5 and 6 stripes parity bits across a storage array, Zfec encodes bits in such a manner where only k valid of m total chunks are needed to reconstruct the original. This becomes more complicated by the fact that Zfec does not have integrity checks built-in. Bao is used to verify the integrity of the decoded input; if the integrity check fails, we can't be quite sure which chunk failed. So, there are two ways to handle this; either create a hash for each chunk and persist it in a safe place out-of-band, or, try each combination of chunks until a combination is found that works. The latter approach is used here, since the need for scrubbing should hopefully be a relatively rare occurrence, especially if reliable storage media is used, a CoW filesystem set to scrub for bitrot, or there's an entire copy that's good. However, if you're down to your last copy, and all you have is the hash (name of the file) and some good chunks, the scrub method in this crate should help, even if it can be computationally-intensive.
+
+Running scrub on an input that has no errors in it actually returns an error; this is to prevent the need for unnecessary writes of bytes that don't need to be scrubbed. This is useful in append-only datastores and metered cloud storage scenarios.
+
+The values 4/8 were chosen for Zfec's k of m parameters, meaning, only 4 valid chunks are needed, but 8 chunks are provided. Half of the chunks could fail to decode. This doubles the size of the data, on top of the encryption and integrity-checking, but such is the price of paranoia. Also, a non-prime k is needed to align chunk size with Bao slice size.
+
+Bao only supports a fixed chunk size of 1KB, so the smallest a Carbonado file can be is 8KB.
