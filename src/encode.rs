@@ -8,8 +8,9 @@ use snap::write::FrameEncoder;
 use zfec_rs::Fec;
 
 use crate::{
-    constants::{FEC_K, FEC_M, SLICE_LEN},
+    constants::{FEC_K, FEC_M},
     structs::EncodeInfo,
+    utils::calc_padding_len,
 };
 
 /// Snappy compression
@@ -31,32 +32,28 @@ pub fn ecies(pubkey: &[u8], compressed: &[u8]) -> Result<Vec<u8>> {
 }
 
 /// Bao stream encoding
-pub fn bao(encrypted: &[u8]) -> Result<(Vec<u8>, Hash)> {
-    let (encoded, hash) = bao_encode(encrypted);
+pub fn bao(input: &[u8]) -> Result<(Vec<u8>, Hash)> {
+    let (encoded, hash) = bao_encode(input);
 
     Ok((encoded, hash))
 }
 
 /// Zfec forward error correction encoding
-pub fn zfec(streamed: &[u8]) -> Result<(Vec<u8>, usize)> {
+pub fn zfec(input: &[u8]) -> Result<(Vec<u8>, usize)> {
     // Calculate padding (find a length that divides evenly both by Zfec FEC_K and Bao SLICE_LEN, then find the difference)
-    let streamed_len = streamed.len();
-    let overlap_constant = SLICE_LEN as usize * FEC_M;
-    let target_size = streamed_len - (streamed_len % overlap_constant) + overlap_constant as usize;
-    let padding_len = target_size - streamed_len;
-    let chunk_size = target_size / FEC_K;
+    let input_len = input.len();
+    let (padding_len, chunk_size) = calc_padding_len(input_len);
     // TODO: CSPRNG padding
     let mut padding_bytes = vec![0u8; padding_len];
-    debug!("Carbonado padding: {padding_len}, Chunk Size: {chunk_size}");
-    let mut padded_streamed = Vec::from(streamed);
-    padded_streamed.append(&mut padding_bytes);
+    let mut padded_input = Vec::from(input);
+    padded_input.append(&mut padding_bytes);
     debug!(
         "After padding has been added, input is now: {} bytes",
-        padded_streamed.len()
+        padded_input.len()
     );
 
     let fec = Fec::new(FEC_K, FEC_M)?;
-    let (mut encoded_chunks, zfec_padding) = fec.encode(&padded_streamed)?;
+    let (mut encoded_chunks, zfec_padding) = fec.encode(&padded_input)?;
 
     assert_eq!(
         zfec_padding, 0,
@@ -66,6 +63,11 @@ pub fn zfec(streamed: &[u8]) -> Result<(Vec<u8>, usize)> {
     let mut encoded = vec![];
 
     for chunk in &mut encoded_chunks {
+        assert_eq!(
+            chunk_size,
+            chunk.data.len(),
+            "Chunk size should be as calculated"
+        );
         encoded.append(&mut chunk.data);
     }
 
@@ -73,10 +75,10 @@ pub fn zfec(streamed: &[u8]) -> Result<(Vec<u8>, usize)> {
 }
 
 /// Encode data into Carbonado format in this order:
-/// snap -> ecies -> bao -> zfec
+/// snap -> ecies -> zfec -> bao
 /// It performs compression, encryption, stream encoding, and adds error correction codes, in that order.
 pub fn encode(pubkey: &[u8], input: &[u8]) -> Result<(Vec<u8>, Hash, usize, EncodeInfo)> {
-    let bytes_input = input.len();
+    let input_len = input.len();
 
     let compressed = snap(input)?;
     let bytes_compressed = compressed.len();
@@ -84,26 +86,26 @@ pub fn encode(pubkey: &[u8], input: &[u8]) -> Result<(Vec<u8>, Hash, usize, Enco
     let encrypted = ecies(pubkey, &compressed)?;
     let bytes_encrypted = encrypted.len();
 
-    let (streamed, hash) = bao(&encrypted)?;
-    let bytes_streamed = streamed.len();
-
-    let (encoded, padding) = zfec(&streamed)?;
+    let (encoded, padding) = zfec(&encrypted)?;
     let bytes_encoded = encoded.len();
 
+    let (verifiable, hash) = bao(&encoded)?;
+    let bytes_verifiable = verifiable.len();
+
     // Calculate totals
-    let compression_factor = bytes_compressed as f32 / bytes_input as f32;
-    let amplification_factor = bytes_encoded as f32 / bytes_input as f32;
+    let compression_factor = bytes_compressed as f32 / input_len as f32;
+    let amplification_factor = bytes_verifiable as f32 / input_len as f32;
 
     Ok((
-        encoded,
+        verifiable,
         hash,
         padding,
         EncodeInfo {
-            bytes_input,
+            input_len,
             bytes_compressed,
             bytes_encrypted,
-            bytes_streamed,
             bytes_encoded,
+            bytes_verifiable,
             compression_factor,
             amplification_factor,
         },
