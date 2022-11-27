@@ -7,13 +7,14 @@ use bao::{
     Hash,
 };
 use ecies::decrypt;
-use log::{info, warn};
+use log::{info, trace, warn};
 use snap::read::FrameDecoder;
 use zfec_rs::{Chunk, Fec};
 
 use crate::{
     constants::{FEC_K, FEC_M, SLICE_LEN},
     encode,
+    structs::EncodeInfo,
     utils::decode_bao_hash,
 };
 
@@ -29,8 +30,15 @@ fn zfec_chunks(chunked_bytes: Vec<Vec<u8>>, padding: usize) -> Result<Vec<u8>> {
 
 /// Zfec forward error correction decoding
 pub fn zfec(input: &[u8], padding: usize) -> Result<Vec<u8>> {
+    let input_len = input.len();
+    if input_len % FEC_M != 0 {
+        return Err(anyhow!(
+            "Input bytes must divide evenly over number of chunks"
+        ));
+    }
+
     let chunks: Vec<Vec<u8>> = input
-        .chunks_exact(input.len() / FEC_M)
+        .chunks_exact(input_len / FEC_M)
         .map(|c| c.to_owned())
         .collect();
 
@@ -85,36 +93,37 @@ pub fn extract_slice(encoded: &[u8], index: usize) -> Result<Vec<u8>> {
 }
 
 /// Verify a number of 1KB slices of a Bao stream starting at a specific index
-pub fn verify_slices(hash: &Hash, streamed: &[u8], index: usize, count: usize) -> Result<()> {
+pub fn verify_slice(hash: &Hash, input: &[u8], index: usize, count: usize) -> Result<Vec<u8>> {
     let slice_start = index * SLICE_LEN;
     let slice_len = count * SLICE_LEN;
+    trace!("Verify slice start: {slice_start} len: {slice_len}");
 
-    let encoded_cursor = Cursor::new(&streamed);
+    let encoded_cursor = Cursor::new(&input);
     let mut extractor = SliceExtractor::new(encoded_cursor, slice_start as u64, slice_len as u64);
-    let mut slice = Vec::new();
-    extractor.read_to_end(&mut slice)?;
-
-    let mut decoder = SliceDecoder::new(&*slice, hash, slice_start as u64, slice_len as u64);
+    let mut decoder = SliceDecoder::new(&mut extractor, hash, slice_start as u64, slice_len as u64);
     let mut decoded = vec![];
     decoder.read_to_end(&mut decoded)?;
 
-    Ok(())
+    Ok(decoded)
 }
 
 /// Scrub zfec-encoded data, correcting flipped bits using error correction codes
 /// Returns an error when either valid data cannot be provided, or data is already valid
-pub fn scrub(input: &[u8], padding: usize, hash: &[u8]) -> Result<Vec<u8>> {
+pub fn scrub(input: &[u8], hash: &[u8], encode_info: &EncodeInfo) -> Result<Vec<u8>> {
     let hash = decode_bao_hash(hash)?;
+    let chunk_size = encode_info.chunk_size;
+    let padding = encode_info.padding;
+    let slices_per_chunk = chunk_size / SLICE_LEN;
 
     match bao_decode(input, &hash) {
         Ok(_decoded) => Err(anyhow!("Data does not need to be scrubbed.")),
         Err(e) => {
             warn!("Data failed to verify with error: {e}. Scrubbing...");
-            let input_len = input.len();
             let mut chunks = vec![];
 
             for i in 0..FEC_M {
-                match extract_slice(input, i) {
+                let slice_index = i * slices_per_chunk;
+                match verify_slice(&hash, input, slice_index, slices_per_chunk) {
                     Ok(chunk) => chunks.push(chunk),
                     Err(e) => {
                         warn!("At least one chunk was bad, at chunk index {i}. Error was: {e}.");
@@ -124,17 +133,26 @@ pub fn scrub(input: &[u8], padding: usize, hash: &[u8]) -> Result<Vec<u8>> {
 
             info!("{} good chunks found, of {FEC_K} needed.", chunks.len());
 
-            let decoded = zfec_chunks(chunks, input_len)?;
-            let (scrubbed, scrubbed_padding) = encode::zfec(&decoded)?;
+            let mut decoded = zfec_chunks(chunks, padding)?;
+            decoded.truncate(encode_info.bytes_encoded - padding);
             assert_eq!(
-                padding, scrubbed_padding,
-                "Scrubbed padding is equal to original padding"
+                decoded.len(),
+                encode_info.bytes_encrypted,
+                "Byte lengths match"
             );
+
+            let (scrubbed, scrubbed_padding, _) = encode::zfec(&decoded)?;
+            assert_eq!(
+                scrubbed_padding, padding,
+                "Scrubbed padding should remain 0"
+            );
+
             let (verified, scrubbed_hash) = encode::bao(&scrubbed)?;
             assert_eq!(
                 hash, scrubbed_hash,
                 "Scrubbed hash is equal to original hash"
             );
+
             Ok(verified)
         }
     }

@@ -1,7 +1,7 @@
 use std::fs::read;
 
 use anyhow::Result;
-use carbonado::{decode, encode, utils::init_logging, verify_slices};
+use carbonado::{decode, encode, utils::init_logging, verify_slice};
 use ecies::utils::generate_keypair;
 use log::{debug, info};
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
@@ -20,6 +20,8 @@ fn contract() -> Result<()> {
 
 #[test]
 fn content() -> Result<()> {
+    init_logging();
+
     codec("tests/samples/content.png")?;
 
     Ok(())
@@ -27,6 +29,8 @@ fn content() -> Result<()> {
 
 #[test]
 fn code() -> Result<()> {
+    init_logging();
+
     codec("tests/samples/code.tar")?;
 
     Ok(())
@@ -43,6 +47,8 @@ fn wasm_contract() -> Result<()> {
 
 #[wasm_bindgen_test]
 fn wasm_content() -> Result<()> {
+    init_logging();
+
     codec("tests/samples/content.png")?;
 
     Ok(())
@@ -50,6 +56,8 @@ fn wasm_content() -> Result<()> {
 
 #[wasm_bindgen_test]
 fn wasm_code() -> Result<()> {
+    init_logging();
+
     codec("tests/samples/code.tar")?;
 
     Ok(())
@@ -60,9 +68,9 @@ fn codec(path: &str) -> Result<()> {
     let (privkey, pubkey) = generate_keypair();
 
     info!("Encoding {path}...");
-    let (encoded, hash, padding, encode_info) = encode(&pubkey.serialize(), &input)?;
+    let (encoded, hash, encode_info) = encode(&pubkey.serialize(), &input)?;
 
-    debug!("Padding was {padding}. Encoding Info: {encode_info:#?}");
+    debug!("Encoding Info: {encode_info:#?}");
     assert_eq!(
         encoded.len(),
         encode_info.bytes_verifiable,
@@ -70,10 +78,15 @@ fn codec(path: &str) -> Result<()> {
     );
 
     info!("Verifying stream against hash: {hash}...");
-    verify_slices(&hash, &encoded, 0, 1)?;
+    verify_slice(&hash, &encoded, 0, 8)?;
 
     info!("Decoding Carbonado bytes");
-    let decoded = decode(&privkey.serialize(), hash.as_bytes(), &encoded, padding)?;
+    let decoded = decode(
+        &privkey.serialize(),
+        hash.as_bytes(),
+        &encoded,
+        encode_info.padding,
+    )?;
     assert_eq!(decoded, input, "Decoded output is same as encoded input");
 
     info!("All good!");

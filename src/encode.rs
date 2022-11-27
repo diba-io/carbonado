@@ -39,8 +39,7 @@ pub fn bao(input: &[u8]) -> Result<(Vec<u8>, Hash)> {
 }
 
 /// Zfec forward error correction encoding
-pub fn zfec(input: &[u8]) -> Result<(Vec<u8>, usize)> {
-    // Calculate padding (find a length that divides evenly both by Zfec FEC_K and Bao SLICE_LEN, then find the difference)
+pub fn zfec(input: &[u8]) -> Result<(Vec<u8>, usize, usize)> {
     let input_len = input.len();
     let (padding_len, chunk_size) = calc_padding_len(input_len);
     // TODO: CSPRNG padding
@@ -71,13 +70,13 @@ pub fn zfec(input: &[u8]) -> Result<(Vec<u8>, usize)> {
         encoded.append(&mut chunk.data);
     }
 
-    Ok((encoded, padding_len))
+    Ok((encoded, padding_len, chunk_size))
 }
 
 /// Encode data into Carbonado format in this order:
 /// snap -> ecies -> zfec -> bao
 /// It performs compression, encryption, stream encoding, and adds error correction codes, in that order.
-pub fn encode(pubkey: &[u8], input: &[u8]) -> Result<(Vec<u8>, Hash, usize, EncodeInfo)> {
+pub fn encode(pubkey: &[u8], input: &[u8]) -> Result<(Vec<u8>, Hash, EncodeInfo)> {
     let input_len = input.len();
 
     let compressed = snap(input)?;
@@ -86,7 +85,7 @@ pub fn encode(pubkey: &[u8], input: &[u8]) -> Result<(Vec<u8>, Hash, usize, Enco
     let encrypted = ecies(pubkey, &compressed)?;
     let bytes_encrypted = encrypted.len();
 
-    let (encoded, padding) = zfec(&encrypted)?;
+    let (encoded, padding, chunk_size) = zfec(&encrypted)?;
     let bytes_encoded = encoded.len();
 
     let (verifiable, hash) = bao(&encoded)?;
@@ -99,7 +98,6 @@ pub fn encode(pubkey: &[u8], input: &[u8]) -> Result<(Vec<u8>, Hash, usize, Enco
     Ok((
         verifiable,
         hash,
-        padding,
         EncodeInfo {
             input_len,
             bytes_compressed,
@@ -108,6 +106,8 @@ pub fn encode(pubkey: &[u8], input: &[u8]) -> Result<(Vec<u8>, Hash, usize, Enco
             bytes_verifiable,
             compression_factor,
             amplification_factor,
+            padding,
+            chunk_size,
         },
     ))
 }
