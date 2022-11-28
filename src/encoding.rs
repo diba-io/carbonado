@@ -74,7 +74,9 @@ pub fn zfec(input: &[u8]) -> Result<(Vec<u8>, usize, usize)> {
 }
 
 /// Encode data into Carbonado format in this order:
-/// snap -> ecies -> zfec -> bao
+///
+/// `snap -> ecies -> zfec -> bao`
+///
 /// It performs compression, encryption, stream encoding, and adds error correction codes, in that order.
 pub fn encode(pubkey: &[u8], input: &[u8]) -> Result<(Vec<u8>, Hash, EncodeInfo)> {
     let input_len = input.len();
@@ -86,7 +88,7 @@ pub fn encode(pubkey: &[u8], input: &[u8]) -> Result<(Vec<u8>, Hash, EncodeInfo)
     let bytes_encrypted = encrypted.len();
 
     let (encoded, padding, chunk_size) = zfec(&encrypted)?;
-    let bytes_encoded = encoded.len();
+    let bytes_ecc = encoded.len();
 
     let (verifiable, hash) = bao(&encoded)?;
     let bytes_verifiable = verifiable.len();
@@ -102,7 +104,7 @@ pub fn encode(pubkey: &[u8], input: &[u8]) -> Result<(Vec<u8>, Hash, EncodeInfo)
             input_len,
             bytes_compressed,
             bytes_encrypted,
-            bytes_encoded,
+            bytes_ecc,
             bytes_verifiable,
             compression_factor,
             amplification_factor,

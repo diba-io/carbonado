@@ -6,14 +6,9 @@ use log::trace;
 
 use crate::constants::{FEC_K, SLICE_LEN};
 
-pub fn decode_bao_hash(hash: &[u8]) -> Result<Hash> {
-    let hash_array: [u8; bao::HASH_SIZE] = hash[..].try_into()?;
-
-    Ok(hash_array.into())
-}
-
 static INIT: Once = Once::new();
 
+/// Helper function only used in tests
 pub fn init_logging() {
     INIT.call_once(|| {
         use std::env::{set_var, var};
@@ -24,6 +19,12 @@ pub fn init_logging() {
 
         pretty_env_logger::init();
     });
+}
+
+pub fn decode_bao_hash(hash: &[u8]) -> Result<Hash> {
+    let hash_array: [u8; bao::HASH_SIZE] = hash[..].try_into()?;
+
+    Ok(hash_array.into())
 }
 
 /// Calculate padding (find a length that divides evenly both by Zfec FEC_K and Bao SLICE_LEN, then find the difference)

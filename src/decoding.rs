@@ -13,7 +13,7 @@ use zfec_rs::{Chunk, Fec};
 
 use crate::{
     constants::{FEC_K, FEC_M, SLICE_LEN},
-    encode,
+    encoding,
     structs::EncodeInfo,
     utils::decode_bao_hash,
 };
@@ -134,20 +134,20 @@ pub fn scrub(input: &[u8], hash: &[u8], encode_info: &EncodeInfo) -> Result<Vec<
             info!("{} good chunks found, of {FEC_K} needed.", chunks.len());
 
             let mut decoded = zfec_chunks(chunks, padding)?;
-            decoded.truncate(encode_info.bytes_encoded - padding);
+            decoded.truncate(encode_info.bytes_ecc - padding);
             assert_eq!(
                 encode_info.bytes_encrypted,
                 decoded.len(),
                 "Byte lengths match"
             );
 
-            let (scrubbed, scrubbed_padding, _) = encode::zfec(&decoded)?;
+            let (scrubbed, scrubbed_padding, _) = encoding::zfec(&decoded)?;
             assert_eq!(
                 padding, scrubbed_padding,
                 "Scrubbed padding should remain 0"
             );
 
-            let (verified, scrubbed_hash) = encode::bao(&scrubbed)?;
+            let (verified, scrubbed_hash) = encoding::bao(&scrubbed)?;
             assert_eq!(
                 hash, scrubbed_hash,
                 "Scrubbed hash is equal to original hash"
