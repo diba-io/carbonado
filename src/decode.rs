@@ -136,14 +136,14 @@ pub fn scrub(input: &[u8], hash: &[u8], encode_info: &EncodeInfo) -> Result<Vec<
             let mut decoded = zfec_chunks(chunks, padding)?;
             decoded.truncate(encode_info.bytes_encoded - padding);
             assert_eq!(
-                decoded.len(),
                 encode_info.bytes_encrypted,
+                decoded.len(),
                 "Byte lengths match"
             );
 
             let (scrubbed, scrubbed_padding, _) = encode::zfec(&decoded)?;
             assert_eq!(
-                scrubbed_padding, padding,
+                padding, scrubbed_padding,
                 "Scrubbed padding should remain 0"
             );
 
