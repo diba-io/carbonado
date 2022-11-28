@@ -8,7 +8,6 @@ use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
 wasm_bindgen_test_configure!(run_in_browser);
 
-// #[ignore]
 #[test]
 fn contract() -> Result<()> {
     init_logging();
@@ -18,6 +17,7 @@ fn contract() -> Result<()> {
     Ok(())
 }
 
+#[ignore]
 #[test]
 fn content() -> Result<()> {
     init_logging();
@@ -27,7 +27,6 @@ fn content() -> Result<()> {
     Ok(())
 }
 
-// #[ignore]
 #[test]
 fn code() -> Result<()> {
     init_logging();
