@@ -1,5 +1,7 @@
 /// For details on Carbonado formats and their uses, see [the Carbonado Format bitmask constant](constants::Format)
 pub mod constants;
+/// Filesystem helper methods
+pub mod fs;
 /// See [structs::EncodeInfo](structs::EncodeInfo) for various statistics gatthered in the encoding step.
 pub mod structs;
 /// Various utilities to assist with Carbonado encoding steps

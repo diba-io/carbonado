@@ -11,6 +11,7 @@ repository = "https://github.com/diba-io/carbonado.git"
 [dependencies]
 anyhow = "1"
 bao = "0.12.1"
+bech32 = "0.9"
 bitmask-enum = "2.1.0"
 combination = "0.2.2"
 ecies = { version = "0.2.2", default-features = false, features = ["pure"] }

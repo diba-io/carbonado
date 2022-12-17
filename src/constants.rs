@@ -46,3 +46,6 @@ pub enum Format {
     Bao,
     Zfec,
 }
+
+/// "Magic number" used by the Carbonado file format.
+pub const MAGICNO: [u8; 10] = [b'C', b'A', b'R', b'B', b'O', b'N', b'A', b'D', b'O', b'\n'];
