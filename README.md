@@ -6,7 +6,7 @@ Designed to keep encrypted, durable, compressed, provably replicated consensus-c
 
 ## Features
 
-Carbonado has features to make it resistant against:
+The Carbonado archival format has features to make it resistant against:
 
 - Drive failure and Data loss
     - Uses [bao encoding](https://github.com/oconnor663/bao) so it can be uploaded to a remote peer, and random 1KB slices of that data can be periodically checked against a local hash to verify data replication and integrity. This way, copies can be distributed geographically; in case of a coronal mass ejection or solar flare, at most, only half the planet will be affected.
@@ -21,11 +21,24 @@ Carbonado has features to make it resistant against:
 
 All without needing a blockchain, however, they can be useful for periodically checkpointing data in a durable place.
 
+### Ecosystem
+
+Carbonado is a novel archival format around which tools are built in order to better utilize it. There will be several storage provider frontends with support planned for:
+
+- [ ] HTTP
+- [ ] Storm
+- [ ] Hypercore
+- [ ] IPFS
+- [ ] BitTorrent
+- [ ] rsync
+
+There will be nodes for storage providers, storage clients, and storage markets.
+
 ### Checkpoints
 
-Carbonado supports an optional Bitcoin-compatible HD wallet with a specific derivation path that can be used to secure timestamped Carbonado Checkpoints using an on-chain OP_RETURN.
+Carbonado storage clients support the use of an optional Bitcoin-compatible HD wallet with a specific derivation path that can be used to secure timestamped Carbonado Checkpoints using an on-chain OP_RETURN.
 
-Checkpoints are structured human-readable yaml files that can be used to reference other carbonado-encoded files. They can also include an index of all the places the file has been stored, so multiple locations on the internet that can be checked for the presence of Carbonado-encoded data for that hash.
+Checkpoints are structured human-readable YAML files that can be used to reference other Carbonado-encoded files. They can also include an index of all the places the file has been stored, so multiple locations on the internet that can be checked for the presence of Carbonado-encoded data for that hash, in addition to other metadata needed to retrieve, decode, and serve across storage provider frontends.
 
 ## Applications
 
@@ -47,19 +60,19 @@ Code, dependencies, and programs can be vendored and preserved wherever they are
 
 On Ethereum, all contract code is replicated by nodes for all addresses at all times. This results in scalability problems, is prohibitively expensive for larger amounts of data, and exposes all data for all contract users, in addition to the possibility it can be altered for all users without their involvement at any time.
 
-Carbonado is specifically designed for encoding RGB contracts, which are to be kept off-chain, encrypted, and safe.
+Carbonado was was designed for encoding data for digital assets of arbitrary length, which is to be kept off-chain, encrypted, and safe.
 
 ### IPFS
 
-IPFS stores data into a database called BadgerDS, encoded in IPLD formats, which isn't the same as a simple, portable flat file format that can be transferred and stored out-of-band of any server, service, or node.
+IPFS stores data into a database called BadgerDS, encoded in IPLD formats, which isn't the same as a simple, portable flat file format that can be transferred and stored out-of-band of any server, service, or node. If the storage backend is swapped out, IPFS is a perfectly fine way to transfer data across a P2P network. Carbonado will support an IPFS frontend.
 
 ### Filecoin
 
-Carbonado uses Bao stream verification based on the performant [Blake3 hash algorithm](https://github.com/BLAKE3-team/BLAKE3), to establish a statistical proof of replication (which can be proven repeatedly over time). Filecoin instead uses zk-SNARKs, which are notoriously computationally expensive, often recommending GPU acceleration. In addition, Filecoin requires a blockchain, whereas Carbonado does not.
+Carbonado uses Bao stream verification based on the performant [Blake3 hash algorithm](https://github.com/BLAKE3-team/BLAKE3), to establish a statistical proof of replication (which can be proven repeatedly over time). Filecoin instead uses zk-SNARKs, which are notoriously computationally expensive, often recommending GPU acceleration. In addition, Filecoin requires a blockchain, whereas Carbonado does not. Carbonado is a direct alternative to Filecoin, and so no compatibility is needed.
 
 ### Storm
 
-Storm is great, but it has a file size limit of 16MB, and while files can be split into chunks, they're stored directly in an embedded database, and not in flat files. Ideally, Carbonado would be used in conjunction with Storm.
+Storm is great, but it has a file size limit of 16MB, and while files can be split into chunks, they're stored directly in an embedded database, and not in flat files. Carbonado will support a Storm frontend.
 
 ## Error correction
 
@@ -70,3 +83,5 @@ Running scrub on an input that has no errors in it actually returns an error; th
 The values 4/8 were chosen for Zfec's k of m parameters, meaning, only 4 valid chunks are needed, but 8 chunks are provided. Half of the chunks could fail to decode. This doubles the size of the data, on top of the encryption and integrity-checking, but such is the price of paranoia. Also, a non-prime k is needed to align chunk size with Bao slice size.
 
 Bao only supports a fixed chunk size of 1KB, so the smallest a Carbonado file can be is 8KB.
+
+Storage providers will not need to use RAID to protect storage volumes so long as `carbonadod` is configured to store archive chunks on 8 separate storage volumes. In case a volume fails, scrubbing will recover the missing data. When data is served, only 4 of the chunks are needed.
