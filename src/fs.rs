@@ -18,7 +18,7 @@ impl TryFrom<File> for Header {
     type Error = Error;
 
     fn try_from(file: File) -> Result<Self> {
-        let mut magic_no = [0_u8; 10];
+        let mut magic_no = [0_u8; 12];
         let mut pubkey = [0_u8; 33];
         let mut hash = [0_u8; 32];
         let mut format = [0_u8; 2];
@@ -72,6 +72,7 @@ impl Header {
         }
     }
 
+    /// Adds a total of 100 bytes to
     pub fn to_vec(&self) -> Vec<u8> {
         let mut pubkey_bytes = self.pubkey.serialize_compressed().to_vec(); // 33 bytes
         let mut hash_bytes = self.hash.as_bytes().to_vec(); // 32 bytes
@@ -79,13 +80,13 @@ impl Header {
         let mut verifiable_len_bytes = self.verifiable_len.to_le_bytes().to_vec(); // 8 bytes
         let mut padding_bytes = self.padding.to_le_bytes().to_vec(); // 2 bytes
         let mut header = Vec::with_capacity(100);
-        header.append(&mut MAGICNO.to_vec()); // 10 bytes
+        header.append(&mut MAGICNO.to_vec()); // 12 bytes
         header.append(&mut pubkey_bytes);
         header.append(&mut hash_bytes);
         header.append(&mut format_bytes);
         header.append(&mut verifiable_len_bytes);
         header.append(&mut padding_bytes);
-        header.append(&mut vec![b'\0'; 13]); // 13 padding null bytes
+        header.append(&mut vec![b'\0'; 11]); // 11 padding null bytes
         header
     }
 }
