@@ -15,6 +15,7 @@ bech32 = "0.9"
 bitmask-enum = "2.1.0"
 combination = "0.2.2"
 ecies = { version = "0.2.2", default-features = false, features = ["pure"] }
+hex = "0.4"
 log = "0.4"
 pretty_env_logger = "0.4"
 secp256k1 = { version = "0.25.0", features = [

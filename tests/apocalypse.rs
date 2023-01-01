@@ -65,9 +65,9 @@ fn wasm_code() -> Result<()> {
 
 fn act_of_god(path: &str) -> Result<()> {
     let input = read(path)?;
-    let (_privkey, pubkey) = generate_keypair();
+    let (_sk, pk) = generate_keypair();
     info!("Encoding {path}...");
-    let (orig_encoded, hash, encode_info) = encode(&pubkey.serialize(), &input)?;
+    let (orig_encoded, hash, encode_info) = encode(&pk.serialize(), &input, 15)?;
     debug!("Encoding Info: {encode_info:#?}");
     let mut new_encoded = Vec::new();
     new_encoded.clone_from(&orig_encoded);
