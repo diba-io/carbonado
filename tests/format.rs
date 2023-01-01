@@ -1,12 +1,7 @@
-use std::{fs::File, io::Write, path::PathBuf};
+use std::{fs::OpenOptions, io::Write, path::PathBuf};
 
 use anyhow::Result;
-use carbonado::{
-    constants::Format,
-    decode, encode,
-    fs::Header,
-    utils::{encode_bao_hash, init_logging},
-};
+use carbonado::{constants::Format, decode, encode, fs::Header, utils::init_logging};
 use ecies::utils::generate_keypair;
 use log::{debug, info, trace};
 use secp256k1::PublicKey;
@@ -15,7 +10,7 @@ use wasm_bindgen_test::wasm_bindgen_test_configure;
 wasm_bindgen_test_configure!(run_in_browser);
 
 #[test]
-fn contract() -> Result<()> {
+fn format() -> Result<()> {
     init_logging();
 
     let input = "Hello world!".as_bytes();
@@ -39,24 +34,23 @@ fn contract() -> Result<()> {
         encode_info.bytes_verifiable,
         encode_info.padding,
     )?;
-    trace!("Header: {header:?}");
+    trace!("Header: {header:#?}");
 
     let header_bytes = header.to_vec();
 
-    let file_path = PathBuf::from(format!("/tmp/{}.c15", encode_bao_hash(&hash)));
+    let file_path = PathBuf::from("/tmp").join(header.filename());
     info!("Writing test file to: {file_path:?}");
-    let mut file = File::create(file_path)?;
+    let mut file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .open(file_path)?;
     file.write_all(&header_bytes)?;
     file.write_all(&encoded)?;
+    info!("Test file successfully written.");
 
+    info!("Parsing file headers...");
     let header = Header::try_from(file)?;
-
-    // pub pubkey: PublicKey,
-    // pub hash: Hash,
-    // pub signature: Signature,
-    // pub format: Format,
-    // pub verifiable_len: u32,
-    // pub padding_len: u32,
 
     assert_eq!(
         header.pubkey,

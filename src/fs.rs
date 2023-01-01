@@ -1,4 +1,8 @@
-use std::{convert::TryFrom, fs::File, io::Read};
+use std::{
+    convert::TryFrom,
+    fs::File,
+    io::{Read, Seek, SeekFrom},
+};
 
 use anyhow::{anyhow, Error, Result};
 use bao::Hash;
@@ -6,7 +10,7 @@ use secp256k1::{schnorr::Signature, KeyPair, Message, PublicKey, Secp256k1};
 
 use crate::{
     constants::{Format, MAGICNO},
-    utils::decode_bao_hash,
+    utils::{decode_bao_hash, encode_bao_hash},
 };
 
 #[derive(Debug)]
@@ -22,7 +26,7 @@ pub struct Header {
 impl TryFrom<File> for Header {
     type Error = Error;
 
-    fn try_from(file: File) -> Result<Self> {
+    fn try_from(mut file: File) -> Result<Self> {
         let mut magic_no = [0_u8; 12];
         let mut pubkey = [0_u8; 33];
         let mut hash = [0_u8; 32];
@@ -31,7 +35,9 @@ impl TryFrom<File> for Header {
         let mut encoded_len = [0_u8; 4];
         let mut padding_len = [0_u8; 4];
 
-        let mut handle = file.take(100);
+        file.seek(SeekFrom::Start(0))?;
+
+        let mut handle = file.take(12 + 33 + 32 + 64 + 1 + 4 + 4);
         handle.read_exact(&mut magic_no)?;
         handle.read_exact(&mut pubkey)?;
         handle.read_exact(&mut hash)?;
@@ -111,6 +117,12 @@ impl Header {
         header.append(&mut encoded_len_bytes);
         header.append(&mut padding_bytes);
         header
+    }
+
+    pub fn filename(&self) -> String {
+        let hash = encode_bao_hash(&self.hash);
+        let fmt = self.format.bits();
+        format!("{hash}.c{fmt}")
     }
 }
 
