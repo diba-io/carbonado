@@ -65,14 +65,14 @@ fn wasm_code() -> Result<()> {
 
 fn codec(path: &str) -> Result<()> {
     let input = read(path)?;
-    let (privkey, pubkey) = generate_keypair();
+    let (sk, pk) = generate_keypair();
 
     info!("Encoding {path}...");
-    let (encoded, hash, encode_info) = encode(&pubkey.serialize(), &input)?;
+    let (encoded, hash, encode_info) = encode(&pk.serialize(), &input, 15)?;
 
     debug!("Encoding Info: {encode_info:#?}");
     assert_eq!(
-        encoded.len(),
+        encoded.len() as u32,
         encode_info.bytes_verifiable,
         "Length of encoded bytes matches bytes_verifiable field"
     );
@@ -82,10 +82,11 @@ fn codec(path: &str) -> Result<()> {
 
     info!("Decoding Carbonado bytes");
     let decoded = decode(
-        &privkey.serialize(),
+        &sk.serialize(),
         hash.as_bytes(),
         &encoded,
         encode_info.padding,
+        15,
     )?;
     assert_eq!(decoded, input, "Decoded output is same as encoded input");
 

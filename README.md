@@ -21,6 +21,10 @@ Carbonado has features to make it resistant against:
 
 All without needing a blockchain, however, they can be useful for periodically checkpointing data in a durable place.
 
+### Documentation
+
+More detailed information on formats and operations can be found in the [carbonado crate docs](https://docs.rs/carbonado), hosted on <docs.rs>.
+
 ### Checkpoints
 
 Carbonado supports an optional Bitcoin-compatible HD wallet with a specific derivation path that can be used to secure timestamped Carbonado Checkpoints using an on-chain OP_RETURN.

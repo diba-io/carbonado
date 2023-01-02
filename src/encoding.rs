@@ -8,7 +8,7 @@ use snap::write::FrameEncoder;
 use zfec_rs::Fec;
 
 use crate::{
-    constants::{FEC_K, FEC_M},
+    constants::{Format, FEC_K, FEC_M},
     structs::EncodeInfo,
     utils::calc_padding_len,
 };
@@ -25,8 +25,8 @@ pub fn snap(input: &[u8]) -> Result<Vec<u8>> {
 }
 
 /// Ecies encryption
-pub fn ecies(pubkey: &[u8], compressed: &[u8]) -> Result<Vec<u8>> {
-    let encrypted = encrypt(pubkey, compressed)?;
+pub fn ecies(pubkey: &[u8], input: &[u8]) -> Result<Vec<u8>> {
+    let encrypted = encrypt(pubkey, input)?;
 
     Ok(encrypted)
 }
@@ -39,11 +39,11 @@ pub fn bao(input: &[u8]) -> Result<(Vec<u8>, Hash)> {
 }
 
 /// Zfec forward error correction encoding
-pub fn zfec(input: &[u8]) -> Result<(Vec<u8>, usize, usize)> {
+pub fn zfec(input: &[u8]) -> Result<(Vec<u8>, u32, u32)> {
     let input_len = input.len();
     let (padding_len, chunk_size) = calc_padding_len(input_len);
     // TODO: CSPRNG padding
-    let mut padding_bytes = vec![0u8; padding_len];
+    let mut padding_bytes = vec![0u8; padding_len as usize];
     let mut padded_input = Vec::from(input);
     padded_input.append(&mut padding_bytes);
     debug!(
@@ -64,7 +64,7 @@ pub fn zfec(input: &[u8]) -> Result<(Vec<u8>, usize, usize)> {
     for chunk in &mut encoded_chunks {
         assert_eq!(
             chunk_size,
-            chunk.data.len(),
+            chunk.data.len() as u32,
             "Chunk size should be as calculated"
         );
         encoded.append(&mut chunk.data);
@@ -74,22 +74,61 @@ pub fn zfec(input: &[u8]) -> Result<(Vec<u8>, usize, usize)> {
 }
 
 /// Encode data into Carbonado format in this order:
-/// snap -> ecies -> zfec -> bao
+///
+/// `snap -> ecies -> zfec -> bao`
+///
 /// It performs compression, encryption, stream encoding, and adds error correction codes, in that order.
-pub fn encode(pubkey: &[u8], input: &[u8]) -> Result<(Vec<u8>, Hash, EncodeInfo)> {
-    let input_len = input.len();
+pub fn encode(pubkey: &[u8], input: &[u8], format: u8) -> Result<(Vec<u8>, Hash, EncodeInfo)> {
+    let input_len = input.len() as u32;
+    let format = Format::try_from(format)?;
 
-    let compressed = snap(input)?;
-    let bytes_compressed = compressed.len();
+    let compressed;
+    let encrypted;
+    let encoded;
+    let padding;
+    let chunk_size;
+    let verifiable;
+    let hash;
 
-    let encrypted = ecies(pubkey, &compressed)?;
-    let bytes_encrypted = encrypted.len();
+    let bytes_compressed;
+    let bytes_encrypted;
+    let bytes_ecc;
+    let bytes_verifiable;
 
-    let (encoded, padding, chunk_size) = zfec(&encrypted)?;
-    let bytes_encoded = encoded.len();
+    if format.contains(Format::Snappy) {
+        compressed = snap(input)?;
+        bytes_compressed = compressed.len() as u32;
+    } else {
+        compressed = input.to_owned();
+        bytes_compressed = 0;
+    }
 
-    let (verifiable, hash) = bao(&encoded)?;
-    let bytes_verifiable = verifiable.len();
+    if format.contains(Format::Ecies) {
+        encrypted = ecies(pubkey, &compressed)?;
+        bytes_encrypted = encrypted.len() as u32;
+    } else {
+        encrypted = compressed;
+        bytes_encrypted = 0;
+    }
+
+    if format.contains(Format::Zfec) {
+        (encoded, padding, chunk_size) = zfec(&encrypted)?;
+        bytes_ecc = encoded.len() as u32;
+    } else {
+        encoded = encrypted;
+        padding = 0;
+        chunk_size = 0;
+        bytes_ecc = 0;
+    }
+
+    if format.contains(Format::Bao) {
+        (verifiable, hash) = bao(&encoded)?;
+        bytes_verifiable = verifiable.len() as u32;
+    } else {
+        verifiable = encoded;
+        hash = Hash::from([0; 32]);
+        bytes_verifiable = 0;
+    }
 
     // Calculate totals
     let compression_factor = bytes_compressed as f32 / input_len as f32;
@@ -102,7 +141,7 @@ pub fn encode(pubkey: &[u8], input: &[u8]) -> Result<(Vec<u8>, Hash, EncodeInfo)
             input_len,
             bytes_compressed,
             bytes_encrypted,
-            bytes_encoded,
+            bytes_ecc,
             bytes_verifiable,
             compression_factor,
             amplification_factor,
