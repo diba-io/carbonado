@@ -121,13 +121,13 @@ pub fn extract_slice(encoded: &[u8], index: u16) -> Result<Vec<u8>> {
 
 /// Verify a number of 1KB slices of a Bao stream starting at a specific index
 pub fn verify_slice(hash: &Hash, input: &[u8], index: u16, count: u16) -> Result<Vec<u8>> {
-    let slice_start = index * SLICE_LEN;
-    let slice_len = count * SLICE_LEN;
+    let slice_start = index as u64 * SLICE_LEN as u64;
+    let slice_len = count as u64 * SLICE_LEN as u64;
     trace!("Verify slice start: {slice_start} len: {slice_len}");
 
     let encoded_cursor = Cursor::new(&input);
-    let mut extractor = SliceExtractor::new(encoded_cursor, slice_start as u64, slice_len as u64);
-    let mut decoder = SliceDecoder::new(&mut extractor, hash, slice_start as u64, slice_len as u64);
+    let mut extractor = SliceExtractor::new(encoded_cursor, slice_start, slice_len);
+    let mut decoder = SliceDecoder::new(&mut extractor, hash, slice_start, slice_len);
     let mut decoded = vec![];
     decoder.read_to_end(&mut decoded)?;
 

@@ -17,7 +17,6 @@ fn contract() -> Result<()> {
     Ok(())
 }
 
-#[ignore]
 #[test]
 fn content() -> Result<()> {
     init_logging();
