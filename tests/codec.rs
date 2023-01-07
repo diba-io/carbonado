@@ -78,7 +78,7 @@ fn codec(path: &str) -> Result<()> {
     );
 
     info!("Verifying stream against hash: {hash}...");
-    verify_slice(&hash, &encoded, 0, 8)?;
+    verify_slice(&hash, &encoded, 0, encode_info.slice_count)?;
 
     info!("Decoding Carbonado bytes");
     let decoded = decode(

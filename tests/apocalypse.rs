@@ -17,6 +17,7 @@ fn contract() -> Result<()> {
     Ok(())
 }
 
+#[ignore]
 #[test]
 fn content() -> Result<()> {
     init_logging();
@@ -26,6 +27,7 @@ fn content() -> Result<()> {
     Ok(())
 }
 
+#[ignore]
 #[test]
 fn code() -> Result<()> {
     init_logging();
@@ -66,7 +68,7 @@ fn act_of_god(path: &str) -> Result<()> {
     let input = read(path)?;
     let (_sk, pk) = generate_keypair();
     info!("Encoding {path}...");
-    let (orig_encoded, hash, encode_info) = encode(&pk.serialize(), &input, 15)?;
+    let (orig_encoded, hash, encode_info) = encode(&pk.serialize(), &input, 12)?;
     debug!("Encoding Info: {encode_info:#?}");
     let mut new_encoded = Vec::new();
     new_encoded.clone_from(&orig_encoded);

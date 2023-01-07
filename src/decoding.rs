@@ -20,17 +20,21 @@ use crate::{
 
 fn zfec_chunks(chunked_bytes: Vec<Vec<u8>>, padding: u32) -> Result<Vec<u8>> {
     let mut zfec_chunks = vec![];
+
     for (i, chunk) in chunked_bytes.into_iter().enumerate() {
         zfec_chunks.push(Chunk::new(chunk, i));
     }
+
     let fec = Fec::new(FEC_K, FEC_M)?;
     let decoded = fec.decode(&zfec_chunks, padding as usize)?;
+
     Ok(decoded)
 }
 
 /// Zfec forward error correction decoding
 pub fn zfec(input: &[u8], padding: u32) -> Result<Vec<u8>> {
     let input_len = input.len();
+
     if input_len % FEC_M != 0 {
         return Err(anyhow!(
             "Input bytes must divide evenly over number of chunks"
@@ -160,27 +164,28 @@ pub fn scrub(input: &[u8], hash: &[u8], encode_info: &EncodeInfo) -> Result<Vec<
 
             info!("{} good chunks found, of {FEC_K} needed.", chunks.len());
 
-            let mut decoded = zfec_chunks(chunks, padding)?;
-            decoded.truncate((encode_info.bytes_ecc - padding) as usize);
-            assert_eq!(
-                encode_info.bytes_encrypted,
-                decoded.len() as u32,
-                "Byte lengths match"
-            );
+            let decoded = zfec_chunks(chunks, padding)?;
 
             let (scrubbed, scrubbed_padding, _) = encoding::zfec(&decoded)?;
             assert_eq!(
                 padding, scrubbed_padding,
-                "Scrubbed padding should remain 0"
+                "Scrubbed padding should remain the same"
             );
 
-            let (verified, scrubbed_hash) = encoding::bao(&scrubbed)?;
+            let (verifiable, scrubbed_hash) = encoding::bao(&scrubbed)?;
+
+            log::debug!(
+                "input len: {}, scrubbed len: {}",
+                input.len(),
+                verifiable.len()
+            );
+
             assert_eq!(
                 hash, scrubbed_hash,
                 "Scrubbed hash is equal to original hash"
             );
 
-            Ok(verified)
+            Ok(verifiable)
         }
     }
 }

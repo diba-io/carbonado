@@ -24,4 +24,6 @@ pub struct EncodeInfo {
     pub padding: u32,
     /// How many bytes are in each Zfec chunk
     pub chunk_size: u32,
+    /// How many slices are there, total
+    pub slice_count: u16,
 }

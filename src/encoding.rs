@@ -8,7 +8,7 @@ use snap::write::FrameEncoder;
 use zfec_rs::Fec;
 
 use crate::{
-    constants::{Format, FEC_K, FEC_M},
+    constants::{Format, FEC_K, FEC_M, SLICE_LEN},
     structs::EncodeInfo,
     utils::calc_padding_len,
 };
@@ -39,6 +39,7 @@ pub fn bao(input: &[u8]) -> Result<(Vec<u8>, Hash)> {
 }
 
 /// Zfec forward error correction encoding
+/// Returns a tuple of encoded bytes, the amount of padding used, and the length of each chunk.
 pub fn zfec(input: &[u8]) -> Result<(Vec<u8>, u32, u32)> {
     let input_len = input.len();
     let (padding_len, chunk_size) = calc_padding_len(input_len);
@@ -67,6 +68,7 @@ pub fn zfec(input: &[u8]) -> Result<(Vec<u8>, u32, u32)> {
             chunk.data.len() as u32,
             "Chunk size should be as calculated"
         );
+        log::debug!("Hello, CHUNK INDEX: {}", chunk.index);
         encoded.append(&mut chunk.data);
     }
 
@@ -87,6 +89,7 @@ pub fn encode(pubkey: &[u8], input: &[u8], format: u8) -> Result<(Vec<u8>, Hash,
     let encoded;
     let padding;
     let chunk_size;
+    let slice_count;
     let verifiable;
     let hash;
 
@@ -114,11 +117,13 @@ pub fn encode(pubkey: &[u8], input: &[u8], format: u8) -> Result<(Vec<u8>, Hash,
     if format.contains(Format::Zfec) {
         (encoded, padding, chunk_size) = zfec(&encrypted)?;
         bytes_ecc = encoded.len() as u32;
+        slice_count = (bytes_ecc / SLICE_LEN as u32) as u16;
     } else {
         encoded = encrypted;
         padding = 0;
         chunk_size = 0;
         bytes_ecc = 0;
+        slice_count = 0;
     }
 
     if format.contains(Format::Bao) {
@@ -147,6 +152,7 @@ pub fn encode(pubkey: &[u8], input: &[u8], format: u8) -> Result<(Vec<u8>, Hash,
             amplification_factor,
             padding,
             chunk_size,
+            slice_count,
         },
     ))
 }
