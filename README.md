@@ -90,6 +90,6 @@ Running scrub on an input that has no errors in it actually returns an error; th
 
 The values 4/8 were chosen for Zfec's k of m parameters, meaning, only 4 valid chunks are needed, but 8 chunks are provided. Half of the chunks could fail to decode. This doubles the size of the data, on top of the encryption and integrity-checking, but such is the price of paranoia. Also, a non-prime k is needed to align chunk size with Bao slice size.
 
-Bao only supports a fixed chunk size of 1KB, so the smallest a Carbonado file can be is 8KB.
+Bao only supports a fixed chunk size of 1KB, so the smallest a Carbonado file can be is 8KB. This also aligns well with 4KB HDD sectors, for less wasted space.
 
-Storage providers will not need to use RAID to protect storage volumes so long as `carbonadod` is configured to store archive chunks on 8 separate storage volumes. In case a volume fails, scrubbing will recover the missing data. When data is served, only 4 of the chunks are needed.
+Storage providers will not need to use RAID to protect storage volumes so long as `carbonadod` is configured to store archive chunks on 8 separate storage volumes. In case a volume fails, scrubbing will recover the missing data. When data is served, only 4 of the chunks are needed. This results in a sort of user-level "application RAID", which is inline with Carbonado's design principles of being a flexible format with user-friendly configuration options. It's designed to be as approachable for "Uncle Jim" hobbyists to use as it is for professional mining datacenters bagged in FIL or XCH.
