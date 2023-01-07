@@ -21,6 +21,10 @@ The Carbonado archival format has features to make it resistant against:
 
 All without needing a blockchain, however, they can be useful for periodically checkpointing data in a durable place.
 
+### Documentation
+
+More detailed information on formats and operations can be found in the [carbonado crate docs](https://docs.rs/carbonado), hosted on <docs.rs>.
+
 ### Ecosystem
 
 Carbonado is a novel archival format around which tools are built in order to better utilize it. There will be several storage provider frontends with support planned for:
@@ -31,8 +35,12 @@ Carbonado is a novel archival format around which tools are built in order to be
 - [ ] IPFS
 - [ ] BitTorrent
 - [ ] rsync
+- [ ] SFTP
+- [ ] S3-compatible object storage
 
-There will be nodes for storage providers, storage clients, and storage markets.
+Let us know if any of these particular use-cases interests you!
+
+Nodes for storage providers, storage clients, and storage markets are planned.
 
 ### Checkpoints
 
