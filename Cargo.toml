@@ -1,12 +1,13 @@
 [package]
 name = "carbonado"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2021"
 license = "MIT"
 description = "An apocalypse-resistant data storage format for the truly paranoid."
 documentation = "https://docs.rs/carbonado"
 homepage = "https://github.com/diba-io/carbonado"
 repository = "https://github.com/diba-io/carbonado.git"
+include = ["src/**/*", "LICENSE", "README.md"]
 
 [dependencies]
 anyhow = "1"

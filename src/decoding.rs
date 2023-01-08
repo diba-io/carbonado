@@ -74,9 +74,7 @@ pub fn snap(input: &[u8]) -> Result<Vec<u8>> {
     Ok(decompressed)
 }
 
-/// Decode data from Carbonado format in reverse order:
-///
-/// `bao -> zfec -> ecies -> snap`
+/// Decode data from Carbonado format in reverse order: `bao -> zfec -> ecies -> snap`
 pub fn decode(
     secret_key: &[u8],
     hash: &[u8],
@@ -113,7 +111,7 @@ pub fn decode(
     Ok(decompressed)
 }
 
-/// Extract a 1KB slice of a Bao stream at a specific index, after decoding it from zfec
+/// Extract a 1KB slice of a Bao stream at a specific index, after decoding it from zfec.
 pub fn extract_slice(encoded: &[u8], index: u16) -> Result<Vec<u8>> {
     let slice_start = index * SLICE_LEN;
     let encoded_cursor = Cursor::new(&encoded);
@@ -124,7 +122,7 @@ pub fn extract_slice(encoded: &[u8], index: u16) -> Result<Vec<u8>> {
     Ok(slice)
 }
 
-/// Verify a number of 1KB slices of a Bao stream starting at a specific index
+/// Verify a number of 1KB slices of a Bao stream starting at a specific index.
 pub fn verify_slice(hash: &Hash, input: &[u8], index: u16, count: u16) -> Result<Vec<u8>> {
     let slice_start = index as u64 * SLICE_LEN as u64;
     let slice_len = count as u64 * SLICE_LEN as u64;
