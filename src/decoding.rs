@@ -111,7 +111,9 @@ pub fn decode(
     Ok(decompressed)
 }
 
-/// Extract a 1KB slice of a Bao stream at a specific index, after decoding it from zfec.
+/// Extract a 1KB slice of a Bao stream at a specific index.
+///
+/// This helps for periodic verification.
 pub fn extract_slice(encoded: &[u8], index: u16) -> Result<Vec<u8>> {
     let slice_start = index * SLICE_LEN;
     let encoded_cursor = Cursor::new(&encoded);
@@ -123,6 +125,8 @@ pub fn extract_slice(encoded: &[u8], index: u16) -> Result<Vec<u8>> {
 }
 
 /// Verify a number of 1KB slices of a Bao stream starting at a specific index.
+///
+/// This is limited to u16 indices, because segments are intended to be no larger than 4MB.
 pub fn verify_slice(hash: &Hash, input: &[u8], index: u16, count: u16) -> Result<Vec<u8>> {
     let slice_start = index as u64 * SLICE_LEN as u64;
     let slice_len = count as u64 * SLICE_LEN as u64;
@@ -137,8 +141,14 @@ pub fn verify_slice(hash: &Hash, input: &[u8], index: u16, count: u16) -> Result
     Ok(decoded)
 }
 
-/// Scrub zfec-encoded data, correcting flipped bits using error correction codes.
+/// Scrub zfec-encoded data, correcting flipped bits using forward error correction codes.
 /// Returns an error when either valid data cannot be provided, or data is already valid.
+///
+/// If data is already valid, the error message "Data does not need to be scrubbed." is returned.
+/// This helps nodes prevent unnecessary writes for periodic scrubbing.
+///
+/// TODO: At present, this method is not deterministic, so data larger than 8KB cannot be reencoded.
+/// This is still useful for data recovery, but it requires interactivity with storage clients.
 pub fn scrub(input: &[u8], hash: &[u8], encode_info: &EncodeInfo) -> Result<Vec<u8>> {
     let hash = decode_bao_hash(hash)?;
     let chunk_size = encode_info.chunk_len;

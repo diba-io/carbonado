@@ -4,17 +4,24 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// For details on Carbonado formats and their uses, see [the Carbonado Format bitmask constant](constants::Format)
+/// For details on Carbonado formats and their uses, see the [Carbonado Format bitmask constant](constants::Format).
 pub mod constants;
-/// Filesystem helper methods
+/// Filesystem helper methods.
 pub mod fs;
 /// See [structs::EncodeInfo](structs::EncodeInfo) for various statistics gatthered in the encoding step.
 pub mod structs;
-/// Various utilities to assist with Carbonado encoding steps
+/// Various utilities to assist with Carbonado encoding steps.
 pub mod utils;
 
 mod decoding;
 mod encoding;
 
-pub use decoding::{decode, extract_slice, scrub, verify_slice};
 pub use encoding::encode;
+
+pub use decoding::decode;
+
+pub use decoding::extract_slice;
+
+pub use decoding::verify_slice;
+
+pub use decoding::scrub;

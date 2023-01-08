@@ -19,13 +19,13 @@ pub const FEC_M: usize = 8;
 /// | c5  | ✅ |    | ✅ |    | Private media backups |
 /// | c6  |    | ✅ | ✅ |    | Compiled binaries |
 /// | c7  | ✅ | ✅ | ✅ |    | Full drive backups |
-/// | c8  |    |    |    | ✅ | ??? |
-/// | c9  | ✅ |    |    | ✅ | ??? |
-/// | c10 |    | ✅ |    | ✅ | ??? |
+/// | c8  |    |    |    | ✅ | Television broadcasts |
+/// | c9  | ✅ |    |    | ✅ | Encrypted transmissions |
+/// | c10 |    | ✅ |    | ✅ | Compressed data streaming over lossy channels such as UDP |
 /// | c11 | ✅ | ✅ |    | ✅ | Encrypted device-local Catalogs |
-/// | c12 |    |    | ✅ | ✅ | Publicly-available archival media |
+/// | c12 |    |    | ✅ | ✅ | Publicly-available archived media |
 /// | c13 | ✅ |    | ✅ | ✅ | Georedundant private media backups |
-/// | c14 |    | ✅ | ✅ | ✅ | Source code, token genesis |
+/// | c14 |    | ✅ | ✅ | ✅ | Source code, token genesis, blockchain data |
 /// | c15 | ✅ | ✅ | ✅ | ✅ | Contract data |
 ///
 /// These operations correspond to the following implementations:
@@ -41,7 +41,7 @@ pub const FEC_M: usize = 8;
 ///
 /// Verifiability is needed to pay others for storing or hosting your files, but it inhibits use-cases for mutable or append-only data other than snapshots, since the hash will change so frequently. Bao encoding does not have a large overhead, about 5% at most.
 ///
-/// Any data that is verifiable but also unencrypted is instead signed by the local key. This is good for signed compiled binaries or hosted webpages.
+/// Any data that is verifiable but also unencrypted is instead signed by the local key. This is good for signed compiled binaries or hosted web content.
 #[bitmask(u8)]
 pub enum Format {
     Ecies,
@@ -50,7 +50,7 @@ pub enum Format {
     Zfec,
 }
 
-/// "Magic number" used by the Carbonado file format.
+/// "Magic number" used by the Carbonado file format. 12 bytes: "CARBONADO", and a version, 00, plus a newline character
 pub const MAGICNO: [u8; 12] = [
     b'C', b'A', b'R', b'B', b'O', b'N', b'A', b'D', b'O', b'0', b'0', b'\n',
 ];

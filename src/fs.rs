@@ -13,26 +13,34 @@ use crate::{
     utils::{decode_bao_hash, encode_bao_hash},
 };
 
-fn header_len() -> u64 {
-    12 + 33 + 32 + 64 + 1 + 1 + 4 + 4
+/// 160 bytes should be added for Carbonado headers.
+pub fn header_len() -> u64 {
+    12 + 33 + 32 + 64 + 1 + 1 + 4 + 4 + 9
 }
 
-/// Contains deserialized copies of the data kept in the Carbonado header
+/// Contains deserialized copies of the data kept in the Carbonado header.
 #[derive(Debug)]
 pub struct Header {
+    /// A secp256k1 compressed public key is 33 bytes.
     pub pubkey: PublicKey,
+    /// A Bao hash is 32 bytes.
     pub hash: Hash,
+    /// A Schnorr signature is 64 bytes.
     pub signature: Signature,
+    /// A Carbonado format code is 1 byte.
     pub format: Format,
+    /// A chunk index is provided so each chunk can be stored in separate files.
     pub chunk_index: u8,
+    /// Number of verifiable bytes.
     pub encoded_len: u32,
+    /// Number of bytes added to pad to align zfec chunks and bao slices.
     pub padding_len: u32,
 }
 
 impl TryFrom<File> for Header {
     type Error = Error;
 
-    /// Attempts to decode a header from a file
+    /// Attempts to decode a header from a file.
     fn try_from(mut file: File) -> Result<Self> {
         let mut magic_no = [0_u8; 12];
         let mut pubkey = [0_u8; 33];
@@ -82,7 +90,7 @@ impl TryFrom<File> for Header {
 }
 
 impl Header {
-    /// Creates a new Carbonado Header struct using the provided parameters, using provided serialized primitives
+    /// Creates a new Carbonado Header struct using the provided parameters, using provided serialized primitives.
     pub fn new(
         sk: &[u8],
         hash: &[u8],
@@ -109,7 +117,7 @@ impl Header {
         })
     }
 
-    /// Creates a header to be prepended to files
+    /// Creates a header to be prepended to files.
     pub fn try_to_vec(&self) -> Result<Vec<u8>> {
         let mut pubkey_bytes = self.pubkey.serialize().to_vec(); // 33 bytes
         if pubkey_bytes.len() != 33 {
@@ -127,6 +135,7 @@ impl Header {
         let mut chunk_index = self.chunk_index.to_le_bytes().to_vec(); // 1 byte
         let mut encoded_len_bytes = self.encoded_len.to_le_bytes().to_vec(); // 8 bytes
         let mut padding_bytes = self.padding_len.to_le_bytes().to_vec(); // 2 bytes
+        let mut header_padding = vec![0_u8; 9];
 
         let mut header = Vec::new();
 
@@ -138,6 +147,7 @@ impl Header {
         header.append(&mut chunk_index);
         header.append(&mut encoded_len_bytes);
         header.append(&mut padding_bytes);
+        header.append(&mut header_padding);
 
         if header.len() != header_len() as usize {
             return Err(anyhow!("Invalid header length calculation"));
@@ -146,7 +156,7 @@ impl Header {
         Ok(header)
     }
 
-    /// Helper function for naming a Carbonado archive file
+    /// Helper function for naming a Carbonado archive file.
     pub fn filename(&self) -> String {
         let hash = encode_bao_hash(&self.hash);
         let fmt = self.format.bits();
