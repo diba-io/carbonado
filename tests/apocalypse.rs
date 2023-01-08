@@ -70,8 +70,7 @@ fn act_of_god(path: &str) -> Result<()> {
     info!("Encoding {path}...");
     let (orig_encoded, hash, encode_info) = encode(&pk.serialize(), &input, 12)?;
     debug!("Encoding Info: {encode_info:#?}");
-    let mut new_encoded = Vec::new();
-    new_encoded.clone_from(&orig_encoded);
+    let mut new_encoded = orig_encoded.clone();
 
     info!("Scrubbing stream against hash: {hash}...");
     let orig_result = scrub(&orig_encoded, hash.as_bytes(), &encode_info);

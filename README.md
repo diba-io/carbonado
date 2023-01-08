@@ -93,3 +93,11 @@ The values 4/8 were chosen for Zfec's k of m parameters, meaning, only 4 valid c
 Bao only supports a fixed chunk size of 1KB, so the smallest a Carbonado file can be is 8KB. This also aligns well with 4KB HDD sectors, for less wasted space.
 
 Storage providers will not need to use RAID to protect storage volumes so long as `carbonadod` is configured to store archive chunks on 8 separate storage volumes. In case a volume fails, scrubbing will recover the missing data. When data is served, only 4 of the chunks are needed. This results in a sort of user-level "application RAID", which is inline with Carbonado's design principles of being a flexible format with user-friendly configuration options. It's designed to be as approachable for "Uncle Jim" hobbyists to use as it is for professional mining datacenters bagged in FIL or XCH.
+
+## Terminology
+
+Files are split into segments of a maximum of 1MB input length. This was chosen because it aligns well with the IPFS IPLD, Storm, and BitTorrent frontends. These segments are tracked and combined separately using catalog files, which may also store additional metadata about the files needed for specific storage frontends. Chunks are used for error correction, and can be stored separately on separate volumes. Slices are relevant to stream verification, are hardcoded to be 1KB in size, and are also a reference to Rust byte slices (references to an array of unsighted 8-bit integers).
+
+In summary: File of n MB -> n MB / 1MB Catalog Segments -> 8x Zfec Chunks -> >=16MB / 8x / 1024 Byte Slices
+
+Only chunks are stored separately on-disk. Slices are referenced in-memory, and how segments are streamed is frontend-specific. Segmentation also helps with computational parallelization, reduces node memory requirements, and helps spread IO load across storage volumes.

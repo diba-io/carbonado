@@ -31,12 +31,13 @@ fn format() -> Result<()> {
         &sk.serialize(),
         hash.as_bytes(),
         format,
+        0,
         encode_info.bytes_verifiable,
-        encode_info.padding,
+        encode_info.padding_len,
     )?;
     trace!("Header: {header:#?}");
 
-    let header_bytes = header.to_vec();
+    let header_bytes = header.try_to_vec()?;
 
     let file_path = PathBuf::from("/tmp").join(header.filename());
     info!("Writing test file to: {file_path:?}");
@@ -58,15 +59,16 @@ fn format() -> Result<()> {
     );
     assert_eq!(header.hash, hash);
     assert_eq!(header.format, format);
+    assert_eq!(header.chunk_index, 0);
     assert_eq!(header.encoded_len, encode_info.bytes_verifiable);
-    assert_eq!(header.padding_len, encode_info.padding);
+    assert_eq!(header.padding_len, encode_info.padding_len);
 
     info!("Decoding Carbonado bytes");
     let decoded = decode(
         &sk.serialize(),
         hash.as_bytes(),
         &encoded,
-        encode_info.padding,
+        encode_info.padding_len,
         15,
     )?;
 

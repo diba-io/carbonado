@@ -21,9 +21,11 @@ pub struct EncodeInfo {
     /// The total amount of file amplification. 2.0x is typical for 4/8 Zfec encoding, the others are pretty minimal, at roughly 1.1x.
     pub amplification_factor: f32,
     /// The amount of padding added to input data in order to align it with Bao slice size (1KB) and 4/8 Zfec chunk size (4KB).
-    pub padding: u32,
+    pub padding_len: u32,
     /// How many bytes are in each Zfec chunk
-    pub chunk_size: u32,
+    pub chunk_len: u32,
     /// How many slices are there, total
-    pub slice_count: u16,
+    pub verifiable_slice_count: u16,
+    /// How many slices there are per chunk
+    pub chunk_slice_count: u16,
 }

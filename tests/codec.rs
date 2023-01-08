@@ -78,14 +78,14 @@ fn codec(path: &str) -> Result<()> {
     );
 
     info!("Verifying stream against hash: {hash}...");
-    verify_slice(&hash, &encoded, 0, encode_info.slice_count)?;
+    verify_slice(&hash, &encoded, 0, encode_info.verifiable_slice_count)?;
 
     info!("Decoding Carbonado bytes");
     let decoded = decode(
         &sk.serialize(),
         hash.as_bytes(),
         &encoded,
-        encode_info.padding,
+        encode_info.padding_len,
         15,
     )?;
     assert_eq!(decoded, input, "Decoded output is same as encoded input");

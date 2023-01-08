@@ -138,12 +138,12 @@ pub fn verify_slice(hash: &Hash, input: &[u8], index: u16, count: u16) -> Result
     Ok(decoded)
 }
 
-/// Scrub zfec-encoded data, correcting flipped bits using error correction codes
-/// Returns an error when either valid data cannot be provided, or data is already valid
+/// Scrub zfec-encoded data, correcting flipped bits using error correction codes.
+/// Returns an error when either valid data cannot be provided, or data is already valid.
 pub fn scrub(input: &[u8], hash: &[u8], encode_info: &EncodeInfo) -> Result<Vec<u8>> {
     let hash = decode_bao_hash(hash)?;
-    let chunk_size = encode_info.chunk_size;
-    let padding = encode_info.padding;
+    let chunk_size = encode_info.chunk_len;
+    let padding = encode_info.padding_len;
     let slices_per_chunk = (chunk_size / SLICE_LEN as u32) as u16;
 
     match bao_decode(input, &hash) {
@@ -166,24 +166,26 @@ pub fn scrub(input: &[u8], hash: &[u8], encode_info: &EncodeInfo) -> Result<Vec<
 
             let decoded = zfec_chunks(chunks, padding)?;
 
+            // TODO: Fix Zfec determinism issues for large files
+
             let (scrubbed, scrubbed_padding, _) = encoding::zfec(&decoded)?;
-            assert_eq!(
-                padding, scrubbed_padding,
-                "Scrubbed padding should remain the same"
-            );
+            if padding != scrubbed_padding {
+                return Err(anyhow!("Scrubbed padding should remain the same"));
+            }
 
             let (verifiable, scrubbed_hash) = encoding::bao(&scrubbed)?;
 
-            log::debug!(
-                "input len: {}, scrubbed len: {}",
-                input.len(),
-                verifiable.len()
-            );
+            if input.len() != verifiable.len() {
+                return Err(anyhow!(
+                    "Mismatch, input len: {}, scrubbed len: {}",
+                    input.len(),
+                    verifiable.len()
+                ));
+            }
 
-            assert_eq!(
-                hash, scrubbed_hash,
-                "Scrubbed hash is equal to original hash"
-            );
+            if hash != scrubbed_hash {
+                return Err(anyhow!("Scrubbed hash is not equal to original hash"));
+            }
 
             Ok(verifiable)
         }
