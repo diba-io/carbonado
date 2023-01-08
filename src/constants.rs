@@ -1,8 +1,11 @@
 use bitmask_enum::bitmask;
 
-pub const SLICE_LEN: u16 = 1024; // Bao slice length
-pub const FEC_K: usize = 4; // Zfec chunks needed
-pub const FEC_M: usize = 8; // Zfec chunks produced
+/// Bao slice length
+pub const SLICE_LEN: u16 = 1024;
+/// Zfec chunks needed (k)
+pub const FEC_K: usize = 4;
+/// Zfec chunks encoded (m)
+pub const FEC_M: usize = 8;
 
 /// ## Bitmask for Carbonado formats c0-c15
 ///

@@ -24,7 +24,8 @@ mod encoding;
 pub use encoding::encode;
 
 /// Decode data from Carbonado format in reverse order:
-/// bao -> zfec -> ecies -> snap
+///
+/// `bao -> zfec -> ecies -> snap`
 pub use decoding::decode;
 
 /// Extract a 1KB slice of a Bao stream at a specific index, after decoding it from zfec

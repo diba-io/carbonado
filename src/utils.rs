@@ -25,11 +25,13 @@ pub fn init_logging() {
     });
 }
 
+/// Encodes a Bao hash into a hexadecimal string
 pub fn encode_bao_hash(hash: &Hash) -> String {
     let hash_hex = hash.to_hex();
     hash_hex.to_string()
 }
 
+/// Decodes a Bao hash from a hexadecimal string
 pub fn decode_bao_hash(hash: &[u8]) -> Result<Hash> {
     let hash_array: [u8; bao::HASH_SIZE] = hash[..].try_into()?;
     Ok(hash_array.into())
@@ -47,10 +49,12 @@ pub fn calc_padding_len(input_len: usize) -> (u32, u32) {
     (padding_len as u32, chunk_size as u32)
 }
 
+/// Helper for encoding data to bech32m
 pub fn bech32m_encode(hrp: &str, bytes: &[u8]) -> Result<String> {
     Ok(encode(hrp, bytes.to_base32(), Variant::Bech32m)?)
 }
 
+/// Helper for decoding bech32-encoded data
 pub fn bech32_decode(bech32_str: &str) -> Result<(String, Vec<u8>, Variant)> {
     let (hrp, words, variant) = decode(bech32_str)?;
     Ok((hrp, Vec::<u8>::from_base32(&words)?, variant))

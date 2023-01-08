@@ -17,6 +17,7 @@ fn header_len() -> u64 {
     12 + 33 + 32 + 64 + 1 + 1 + 4 + 4
 }
 
+/// Contains deserialized copies of the data kept in the Carbonado header
 #[derive(Debug)]
 pub struct Header {
     pub pubkey: PublicKey,
@@ -31,6 +32,7 @@ pub struct Header {
 impl TryFrom<File> for Header {
     type Error = Error;
 
+    /// Attempts to decode a header from a file
     fn try_from(mut file: File) -> Result<Self> {
         let mut magic_no = [0_u8; 12];
         let mut pubkey = [0_u8; 33];
@@ -80,6 +82,7 @@ impl TryFrom<File> for Header {
 }
 
 impl Header {
+    /// Creates a new Carbonado Header struct using the provided parameters, using provided serialized primitives
     pub fn new(
         sk: &[u8],
         hash: &[u8],
@@ -106,7 +109,7 @@ impl Header {
         })
     }
 
-    /// Creates a header to be prepended to files.
+    /// Creates a header to be prepended to files
     pub fn try_to_vec(&self) -> Result<Vec<u8>> {
         let mut pubkey_bytes = self.pubkey.serialize().to_vec(); // 33 bytes
         if pubkey_bytes.len() != 33 {
@@ -143,6 +146,7 @@ impl Header {
         Ok(header)
     }
 
+    /// Helper function for naming a Carbonado archive file
     pub fn filename(&self) -> String {
         let hash = encode_bao_hash(&self.hash);
         let fmt = self.format.bits();

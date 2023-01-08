@@ -75,7 +75,8 @@ pub fn snap(input: &[u8]) -> Result<Vec<u8>> {
 }
 
 /// Decode data from Carbonado format in reverse order:
-/// bao -> zfec -> ecies -> snap
+///
+/// `bao -> zfec -> ecies -> snap`
 pub fn decode(
     secret_key: &[u8],
     hash: &[u8],
