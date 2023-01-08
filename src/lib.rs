@@ -1,3 +1,9 @@
+//! # Carbonado: An apocalypse-resistant data storage format for the truly paranoid.
+//!
+//! Carbonado is an archival format for encrypted, durable, compressed, provably replicated consensus-critical data, without need for a blockchain or powerful hardware. Decoding and encoding can be done in the browser through WebAssembly, built into remote nodes on P2P networks, kept on S3-compatible cloud storage, or locally on-disk as a single highly portable flat file container format.
+
+////////////////////////////////////////////////////////////////////////////////
+
 /// For details on Carbonado formats and their uses, see [the Carbonado Format bitmask constant](constants::Format)
 pub mod constants;
 /// Filesystem helper methods
