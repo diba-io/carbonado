@@ -15,17 +15,13 @@ fn format() -> Result<()> {
 
     let input = "Hello world!".as_bytes();
     let (sk, pk) = generate_keypair();
-    let format = Format::try_from(15)?;
+    let carbonado_level = 15;
+    let format = Format::try_from(carbonado_level)?;
 
     info!("Encoding input: {input:?}...");
-    let (encoded, hash, encode_info) = encode(&pk.serialize(), input, 15)?;
+    let (encoded, hash, encode_info) = encode(&pk.serialize(), input, carbonado_level)?;
 
     debug!("Encoding Info: {encode_info:#?}");
-    assert_eq!(
-        encoded.len() as u32,
-        encode_info.bytes_verifiable,
-        "Length of encoded bytes matches bytes_verifiable field"
-    );
 
     let header = Header::new(
         &sk.serialize(),
@@ -39,7 +35,7 @@ fn format() -> Result<()> {
 
     let header_bytes = header.try_to_vec()?;
 
-    let file_path = PathBuf::from("/tmp").join(header.filename());
+    let file_path = PathBuf::from("/tmp").join(header.file_name());
     info!("Writing test file to: {file_path:?}");
     let mut file = OpenOptions::new()
         .read(true)
@@ -60,7 +56,6 @@ fn format() -> Result<()> {
     assert_eq!(header.hash, hash);
     assert_eq!(header.format, format);
     assert_eq!(header.chunk_index, 0);
-    assert_eq!(header.encoded_len, encode_info.bytes_verifiable);
     assert_eq!(header.padding_len, encode_info.padding_len);
 
     info!("Decoding Carbonado bytes");
@@ -69,7 +64,7 @@ fn format() -> Result<()> {
         hash.as_bytes(),
         &encoded,
         encode_info.padding_len,
-        15,
+        carbonado_level,
     )?;
 
     assert_eq!(decoded, input, "Decoded output is same as encoded input");

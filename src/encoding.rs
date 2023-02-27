@@ -143,12 +143,14 @@ pub fn encode(pubkey: &[u8], input: &[u8], format: u8) -> Result<(Vec<u8>, Hash,
     // Calculate totals
     let compression_factor = bytes_compressed as f32 / input_len as f32;
     let amplification_factor = bytes_verifiable as f32 / input_len as f32;
+    let output_len = verifiable.len() as u32;
 
     Ok((
         verifiable,
         hash,
         EncodeInfo {
             input_len,
+            output_len,
             bytes_compressed,
             bytes_encrypted,
             bytes_ecc,

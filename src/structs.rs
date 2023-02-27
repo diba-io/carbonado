@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 pub struct EncodeInfo {
     /// How many bytes input into the encoding step.
     pub input_len: u32,
+    /// How many bytes total were encoded by any applicable steps for the supplied Carbonado level.
+    pub output_len: u32,
     /// How large the data is after Snappy compression.
     pub bytes_compressed: u32,
     /// Compression factor.
