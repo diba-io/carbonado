@@ -1,7 +1,7 @@
 use std::fs::read;
 
 use anyhow::Result;
-use carbonado::{encode, scrub, utils::init_logging};
+use carbonado::{encode, scrub, structs::Encoded, utils::init_logging};
 use ecies::utils::generate_keypair;
 use log::{debug, info};
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
@@ -68,7 +68,7 @@ fn act_of_god(path: &str) -> Result<()> {
     let input = read(path)?;
     let (_sk, pk) = generate_keypair();
     info!("Encoding {path}...");
-    let (orig_encoded, hash, encode_info) = encode(&pk.serialize(), &input, 12)?;
+    let Encoded(orig_encoded, hash, encode_info) = encode(&pk.serialize(), &input, 12)?;
     debug!("Encoding Info: {encode_info:#?}");
     let mut new_encoded = orig_encoded.clone();
 

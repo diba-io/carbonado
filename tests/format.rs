@@ -1,7 +1,9 @@
 use std::{fs::OpenOptions, io::Write, path::PathBuf};
 
 use anyhow::Result;
-use carbonado::{constants::Format, decode, encode, fs::Header, utils::init_logging};
+use carbonado::{
+    constants::Format, decode, encode, fs::Header, structs::Encoded, utils::init_logging,
+};
 use ecies::utils::generate_keypair;
 use log::{debug, info, trace};
 use secp256k1::PublicKey;
@@ -19,7 +21,7 @@ fn format() -> Result<()> {
     let format = Format::try_from(carbonado_level)?;
 
     info!("Encoding input: {input:?}...");
-    let (encoded, hash, encode_info) = encode(&pk.serialize(), input, carbonado_level)?;
+    let Encoded(encoded, hash, encode_info) = encode(&pk.serialize(), input, carbonado_level)?;
 
     debug!("Encoding Info: {encode_info:#?}");
 

@@ -70,8 +70,14 @@ impl TryFrom<File> for Header {
         }
 
         let pubkey = PublicKey::from_slice(&pubkey)?;
-        let hash = bao::Hash::try_from(hash)?;
         let signature = Signature::from_slice(&signature)?;
+
+        // Verify hash against signature
+        let (x_only_pk, _) = pubkey.x_only_public_key();
+        signature.verify(&Message::from_slice(&hash)?, &x_only_pk)?;
+
+        let hash = bao::Hash::try_from(hash)?;
+
         let format = Format::try_from(format[0])?;
         let chunk_index = u8::from_le_bytes(chunk_index);
         let encoded_len = u32::from_le_bytes(encoded_len);
