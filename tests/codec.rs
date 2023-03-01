@@ -1,7 +1,7 @@
 use std::fs::read;
 
 use anyhow::Result;
-use carbonado::{decode, encode, utils::init_logging, verify_slice};
+use carbonado::{decode, encode, structs::Encoded, utils::init_logging, verify_slice};
 use ecies::utils::generate_keypair;
 use log::{debug, info};
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
@@ -68,7 +68,7 @@ fn codec(path: &str) -> Result<()> {
     let (sk, pk) = generate_keypair();
 
     info!("Encoding {path}...");
-    let (encoded, hash, encode_info) = encode(&pk.serialize(), &input, 15)?;
+    let Encoded(encoded, hash, encode_info) = encode(&pk.serialize(), &input, 15)?;
 
     debug!("Encoding Info: {encode_info:#?}");
     assert_eq!(

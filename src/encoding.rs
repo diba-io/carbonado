@@ -9,7 +9,7 @@ use zfec_rs::Fec;
 
 use crate::{
     constants::{Format, FEC_K, FEC_M, SLICE_LEN},
-    structs::EncodeInfo,
+    structs::{EncodeInfo, Encoded},
     utils::calc_padding_len,
 };
 
@@ -76,7 +76,7 @@ pub fn zfec(input: &[u8]) -> Result<(Vec<u8>, u32, u32)> {
 /// Encode data into Carbonado format, performing compression, encryption, adding error correction codes, and stream verification encoding, in that order.
 ///
 ///  `snap -> ecies -> zfec -> bao`
-pub fn encode(pubkey: &[u8], input: &[u8], format: u8) -> Result<(Vec<u8>, Hash, EncodeInfo)> {
+pub fn encode(pubkey: &[u8], input: &[u8], format: u8) -> Result<Encoded> {
     let input_len = input.len() as u32;
     let format = Format::try_from(format)?;
 
@@ -145,7 +145,7 @@ pub fn encode(pubkey: &[u8], input: &[u8], format: u8) -> Result<(Vec<u8>, Hash,
     let amplification_factor = bytes_verifiable as f32 / input_len as f32;
     let output_len = verifiable.len() as u32;
 
-    Ok((
+    Ok(Encoded(
         verifiable,
         hash,
         EncodeInfo {

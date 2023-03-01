@@ -34,3 +34,7 @@ pub struct EncodeInfo {
     /// How many slices there are per chunk.
     pub chunk_slice_count: u16,
 }
+
+/// Tuple of verifiable bytes, bao hash, and encode info struct
+/// i.e., Encoded(encoded_bytes, bao_hash, encode_info)
+pub struct Encoded(pub Vec<u8>, pub bao::Hash, pub EncodeInfo);
