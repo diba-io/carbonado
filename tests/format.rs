@@ -11,9 +11,11 @@ use wasm_bindgen_test::wasm_bindgen_test_configure;
 
 wasm_bindgen_test_configure!(run_in_browser);
 
+const RUST_LOG: &str = "carbonado=trace, format=trace";
+
 #[test]
 fn format() -> Result<()> {
-    init_logging();
+    init_logging(RUST_LOG);
 
     let input = "Hello world!".as_bytes();
     let (sk, pk) = generate_keypair();

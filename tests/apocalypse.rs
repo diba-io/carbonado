@@ -8,9 +8,11 @@ use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
 wasm_bindgen_test_configure!(run_in_browser);
 
+const RUST_LOG: &str = "carbonado=trace, apocalypse=trace";
+
 #[test]
 fn contract() -> Result<()> {
-    init_logging();
+    init_logging(RUST_LOG);
 
     act_of_god("tests/samples/contract.rgbc")?;
 
@@ -20,7 +22,7 @@ fn contract() -> Result<()> {
 #[ignore]
 #[test]
 fn content() -> Result<()> {
-    init_logging();
+    init_logging(RUST_LOG);
 
     act_of_god("tests/samples/content.png")?;
 
@@ -30,7 +32,7 @@ fn content() -> Result<()> {
 #[ignore]
 #[test]
 fn code() -> Result<()> {
-    init_logging();
+    init_logging(RUST_LOG);
 
     act_of_god("tests/samples/code.tar")?;
 
@@ -39,7 +41,7 @@ fn code() -> Result<()> {
 
 #[wasm_bindgen_test]
 fn wasm_contract() -> Result<()> {
-    init_logging();
+    init_logging(RUST_LOG);
 
     act_of_god("tests/samples/contract.rgbc")?;
 
@@ -48,7 +50,7 @@ fn wasm_contract() -> Result<()> {
 
 #[wasm_bindgen_test]
 fn wasm_content() -> Result<()> {
-    init_logging();
+    init_logging(RUST_LOG);
 
     act_of_god("tests/samples/content.png")?;
 
@@ -57,7 +59,7 @@ fn wasm_content() -> Result<()> {
 
 #[wasm_bindgen_test]
 fn wasm_code() -> Result<()> {
-    init_logging();
+    init_logging(RUST_LOG);
 
     act_of_god("tests/samples/code.tar")?;
 
