@@ -8,7 +8,7 @@ use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
 wasm_bindgen_test_configure!(run_in_browser);
 
-const RUST_LOG: &str = "carbonado=trace, apocalypse=trace";
+const RUST_LOG: &str = "carbonado=trace,apocalypse=trace";
 
 #[test]
 fn contract() -> Result<()> {

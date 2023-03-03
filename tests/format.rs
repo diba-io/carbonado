@@ -11,7 +11,7 @@ use wasm_bindgen_test::wasm_bindgen_test_configure;
 
 wasm_bindgen_test_configure!(run_in_browser);
 
-const RUST_LOG: &str = "carbonado=trace, format=trace";
+const RUST_LOG: &str = "carbonado=trace,format=trace";
 
 #[test]
 fn format() -> Result<()> {

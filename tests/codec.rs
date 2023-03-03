@@ -8,7 +8,7 @@ use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
 wasm_bindgen_test_configure!(run_in_browser);
 
-const RUST_LOG: &str = "carbonado=trace, codec=trace";
+const RUST_LOG: &str = "carbonado=trace,codec=trace";
 
 #[test]
 fn contract() -> Result<()> {
