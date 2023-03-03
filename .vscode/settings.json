@@ -5,8 +5,8 @@
   "files.autoSave": "onFocusChange",
   "files.insertFinalNewline": true,
   "files.trimTrailingWhitespace": true,
-  "rust-analyzer.checkOnSave.command": "clippy",
-  // "rust-analyzer.checkOnSave.target": "wasm32-unknown-unknown",
+  "rust-analyzer.check.command": "clippy",
+  // "rust-analyzer.check.target": "wasm32-unknown-unknown",
   "[toml]": {
     "editor.defaultFormatter": "tamasfe.even-better-toml"
   }
