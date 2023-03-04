@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 pub struct EncodeInfo {
     /// How many bytes input into the encoding step.
     pub input_len: u32,
+    /// How many bytes total were encoded by any applicable steps for the supplied Carbonado level.
+    pub output_len: u32,
     /// How large the data is after Snappy compression.
     pub bytes_compressed: u32,
     /// Compression factor.
@@ -32,3 +34,7 @@ pub struct EncodeInfo {
     /// How many slices there are per chunk.
     pub chunk_slice_count: u16,
 }
+
+/// Tuple of verifiable bytes, bao hash, and encode info struct
+/// i.e., Encoded(encoded_bytes, bao_hash, encode_info)
+pub struct Encoded(pub Vec<u8>, pub bao::Hash, pub EncodeInfo);

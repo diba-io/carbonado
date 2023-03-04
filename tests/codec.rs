@@ -1,16 +1,18 @@
 use std::fs::read;
 
 use anyhow::Result;
-use carbonado::{decode, encode, utils::init_logging, verify_slice};
+use carbonado::{decode, encode, structs::Encoded, utils::init_logging, verify_slice};
 use ecies::utils::generate_keypair;
 use log::{debug, info};
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
 wasm_bindgen_test_configure!(run_in_browser);
 
+const RUST_LOG: &str = "carbonado=trace,codec=trace";
+
 #[test]
 fn contract() -> Result<()> {
-    init_logging();
+    init_logging(RUST_LOG);
 
     codec("tests/samples/contract.rgbc")?;
     // codec("tests/samples/navi10_arch.7z")?;
@@ -20,7 +22,7 @@ fn contract() -> Result<()> {
 
 #[test]
 fn content() -> Result<()> {
-    init_logging();
+    init_logging(RUST_LOG);
 
     codec("tests/samples/content.png")?;
 
@@ -29,7 +31,7 @@ fn content() -> Result<()> {
 
 #[test]
 fn code() -> Result<()> {
-    init_logging();
+    init_logging(RUST_LOG);
 
     codec("tests/samples/code.tar")?;
 
@@ -38,7 +40,7 @@ fn code() -> Result<()> {
 
 #[wasm_bindgen_test]
 fn wasm_contract() -> Result<()> {
-    init_logging();
+    init_logging(RUST_LOG);
 
     codec("tests/samples/contract.rgbc")?;
 
@@ -47,7 +49,7 @@ fn wasm_contract() -> Result<()> {
 
 #[wasm_bindgen_test]
 fn wasm_content() -> Result<()> {
-    init_logging();
+    init_logging(RUST_LOG);
 
     codec("tests/samples/content.png")?;
 
@@ -56,7 +58,7 @@ fn wasm_content() -> Result<()> {
 
 #[wasm_bindgen_test]
 fn wasm_code() -> Result<()> {
-    init_logging();
+    init_logging(RUST_LOG);
 
     codec("tests/samples/code.tar")?;
 
@@ -68,7 +70,7 @@ fn codec(path: &str) -> Result<()> {
     let (sk, pk) = generate_keypair();
 
     info!("Encoding {path}...");
-    let (encoded, hash, encode_info) = encode(&pk.serialize(), &input, 15)?;
+    let Encoded(encoded, hash, encode_info) = encode(&pk.serialize(), &input, 15)?;
 
     debug!("Encoding Info: {encode_info:#?}");
     assert_eq!(

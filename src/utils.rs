@@ -10,15 +10,12 @@ use crate::constants::{FEC_K, SLICE_LEN};
 static INIT: Once = Once::new();
 
 /// Helper function only used in tests.
-pub fn init_logging() {
+pub fn init_logging(rust_log: &str) {
     INIT.call_once(|| {
         use std::env::{set_var, var};
 
         if var("RUST_LOG").is_err() {
-            set_var(
-                "RUST_LOG",
-                "carbonado=trace,codec=trace,apocalypse=trace,format=trace",
-            );
+            set_var("RUST_LOG", rust_log);
         }
 
         pretty_env_logger::init();

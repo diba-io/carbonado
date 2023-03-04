@@ -1,7 +1,7 @@
 use std::{
     convert::TryFrom,
     fs::File,
-    io::{Read, Seek, SeekFrom},
+    io::{Read, Seek},
 };
 
 use anyhow::{anyhow, Error, Result};
@@ -51,7 +51,7 @@ impl TryFrom<File> for Header {
         let mut encoded_len = [0_u8; 4];
         let mut padding_len = [0_u8; 4];
 
-        file.seek(SeekFrom::Start(0))?;
+        file.rewind()?;
 
         let mut handle = file.take(header_len());
         handle.read_exact(&mut magic_no)?;
@@ -70,8 +70,14 @@ impl TryFrom<File> for Header {
         }
 
         let pubkey = PublicKey::from_slice(&pubkey)?;
-        let hash = bao::Hash::try_from(hash)?;
         let signature = Signature::from_slice(&signature)?;
+
+        // Verify hash against signature
+        let (x_only_pk, _) = pubkey.x_only_public_key();
+        signature.verify(&Message::from_slice(&hash)?, &x_only_pk)?;
+
+        let hash = bao::Hash::try_from(hash)?;
+
         let format = Format::try_from(format[0])?;
         let chunk_index = u8::from_le_bytes(chunk_index);
         let encoded_len = u32::from_le_bytes(encoded_len);
@@ -157,7 +163,7 @@ impl Header {
     }
 
     /// Helper function for naming a Carbonado archive file.
-    pub fn filename(&self) -> String {
+    pub fn file_name(&self) -> String {
         let hash = encode_bao_hash(&self.hash);
         let fmt = self.format.bits();
         format!("{hash}.c{fmt}")

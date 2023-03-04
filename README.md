@@ -4,9 +4,9 @@
 
 Carbonado is an archival format for encrypted, durable, compressed, provably replicated consensus-critical data, without need for a blockchain or powerful hardware. Decoding and encoding can be done in the browser through WebAssembly, built into remote nodes on P2P networks, kept on S3-compatible cloud storage, or locally on-disk as a single highly portable flat file container format.
 
-[![Build status](https://img.shields.io/github/actions/workflow/status/diba-io/carbonado/rust.yaml?branch=main&style=flat-square)](https://github.com/diba-io/carbonado/actions/workflows/rust.yaml)
 [![Crates.io](https://img.shields.io/crates/v/carbonado?style=flat-square)](https://docs.rs/carbonado/latest/carbonado/)
 [![docs.rs](https://img.shields.io/docsrs/carbonado?label=docs&style=flat-square)](https://docs.rs/carbonado/latest/carbonado/)
+[![Build status](https://img.shields.io/github/actions/workflow/status/diba-io/carbonado/rust.yaml?branch=main&style=flat-square)](https://github.com/diba-io/carbonado/actions/workflows/rust.yaml)
 [![License: MIT](https://img.shields.io/crates/l/carbonado?style=flat-square)](https://mit-license.org)
 [![Telegram](https://img.shields.io/badge/telegram-invite-blue?style=flat-square)](https://t.me/+eQk5aQ5--iUxYzVk)
 

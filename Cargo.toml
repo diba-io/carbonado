@@ -1,6 +1,6 @@
 [package]
 name = "carbonado"
-version = "0.2.5"
+version = "0.3.0-rc.2"
 edition = "2021"
 license = "MIT"
 description = "An apocalypse-resistant data storage format for the truly paranoid."
