@@ -3,7 +3,7 @@ use std::io::Write;
 use anyhow::{anyhow, Result};
 use bao::{encode::encode as bao_encode, Hash};
 use ecies::encrypt;
-use log::debug;
+use log::{debug, trace};
 use snap::write::FrameEncoder;
 use zfec_rs::Fec;
 
@@ -15,6 +15,7 @@ use crate::{
 
 /// Snappy compression
 pub fn snap(input: &[u8]) -> Result<Vec<u8>> {
+    trace!("compressing");
     let buffer: &[u8] = input;
     let output = vec![];
     let mut writer = FrameEncoder::new(output);
@@ -26,6 +27,7 @@ pub fn snap(input: &[u8]) -> Result<Vec<u8>> {
 
 /// Ecies encryption
 pub fn ecies(pubkey: &[u8], input: &[u8]) -> Result<Vec<u8>> {
+    trace!("encrypting");
     let encrypted = encrypt(pubkey, input)?;
 
     Ok(encrypted)
@@ -33,6 +35,7 @@ pub fn ecies(pubkey: &[u8], input: &[u8]) -> Result<Vec<u8>> {
 
 /// Bao stream encoding
 pub fn bao(input: &[u8]) -> Result<(Vec<u8>, Hash)> {
+    trace!("verifiabilitifying");
     let (encoded, hash) = bao_encode(input);
 
     Ok((encoded, hash))
@@ -41,6 +44,7 @@ pub fn bao(input: &[u8]) -> Result<(Vec<u8>, Hash)> {
 /// Zfec forward error correction encoding
 /// Returns a tuple of encoded bytes, the amount of padding used, and the length of each chunk.
 pub fn zfec(input: &[u8]) -> Result<(Vec<u8>, u32, u32)> {
+    trace!("forward error correctionifying");
     let input_len = input.len();
     let (padding_len, chunk_len) = calc_padding_len(input_len);
 

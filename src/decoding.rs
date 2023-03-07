@@ -33,6 +33,7 @@ fn zfec_chunks(chunked_bytes: Vec<Vec<u8>>, padding: u32) -> Result<Vec<u8>> {
 
 /// Zfec forward error correction decoding
 pub fn zfec(input: &[u8], padding: u32) -> Result<Vec<u8>> {
+    trace!("forward error correcting");
     let input_len = input.len();
 
     if input_len % FEC_M != 0 {
@@ -53,6 +54,7 @@ pub fn zfec(input: &[u8], padding: u32) -> Result<Vec<u8>> {
 
 /// Bao stream extraction
 pub fn bao(input: &[u8], hash: &[u8]) -> Result<Vec<u8>> {
+    trace!("verifying");
     let hash = decode_bao_hash(hash)?;
     let decoded = bao_decode(input, &hash)?;
 
@@ -61,6 +63,7 @@ pub fn bao(input: &[u8], hash: &[u8]) -> Result<Vec<u8>> {
 
 /// Ecies decryption
 pub fn ecies(input: &[u8], secret_key: &[u8]) -> Result<Vec<u8>> {
+    trace!("decrypting");
     let decrypted = decrypt(secret_key, input)?;
 
     Ok(decrypted)
@@ -68,6 +71,7 @@ pub fn ecies(input: &[u8], secret_key: &[u8]) -> Result<Vec<u8>> {
 
 /// Snappy decompression
 pub fn snap(input: &[u8]) -> Result<Vec<u8>> {
+    trace!("decompressing");
     let mut decompressed = vec![];
     FrameDecoder::new(input).read_to_end(&mut decompressed)?;
 
