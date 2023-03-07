@@ -4,8 +4,9 @@
 
 Carbonado is an archival format for encrypted, durable, compressed, provably replicated consensus-critical data, without need for a blockchain or powerful hardware. Decoding and encoding can be done in the browser through WebAssembly, built into remote nodes on P2P networks, kept on S3-compatible cloud storage, or locally on-disk as a single highly portable flat file container format.
 
-[![Build status](https://img.shields.io/github/actions/workflow/status/diba-io/carbonado/rust.yaml?branch=main&style=flat-square)](https://github.com/diba-io/carbonado/actions/workflows/rust.yaml)
 [![Crates.io](https://img.shields.io/crates/v/carbonado?style=flat-square)](https://docs.rs/carbonado/latest/carbonado/)
+[![docs.rs](https://img.shields.io/docsrs/carbonado?label=docs&style=flat-square)](https://docs.rs/carbonado/latest/carbonado/)
+[![Build status](https://img.shields.io/github/actions/workflow/status/diba-io/carbonado/rust.yaml?branch=main&style=flat-square)](https://github.com/diba-io/carbonado/actions/workflows/rust.yaml)
 [![License: MIT](https://img.shields.io/crates/l/carbonado?style=flat-square)](https://mit-license.org)
 [![Telegram](https://img.shields.io/badge/telegram-invite-blue?style=flat-square)](https://t.me/+eQk5aQ5--iUxYzVk)
 
@@ -28,13 +29,15 @@ All without needing a blockchain, however, they can be useful for periodically c
 
 ### Documentation
 
-More detailed information on formats and operations can be found in the [carbonado crate docs](https://docs.rs/carbonado), hosted on <docs.rs>.
+More detailed information on formats and operations can be found in the [carbonado crate docs](https://docs.rs/carbonado/latest/carbonado), hosted on [docs.rs](https://docs.rs).
+
+There will also be a list of specs, known as [CHIPs](https://github.com/diba-io/CHIPs).
 
 ### Ecosystem
 
 Carbonado is a novel archival format around which tools are built in order to better utilize it. There will be several storage provider frontends with support planned for:
 
-- [ ] HTTP
+- [x] HTTP
 - [ ] Storm
 - [ ] Hypercore
 - [ ] IPFS
@@ -45,7 +48,7 @@ Carbonado is a novel archival format around which tools are built in order to be
 
 Let us know if any of these particular use-cases interests you!
 
-Nodes for storage providers, storage clients, and storage markets are planned.
+The [carbonado-node](https://github.com/diba-io/carbonado-node) is where these implementations are taking place. There is also work planned for [carbonado-clients](https://github.com/diba-io/carbonado-clients).
 
 ### Checkpoints
 
@@ -103,6 +106,6 @@ Storage providers will not need to use RAID to protect storage volumes so long a
 
 Files are split into segments of a maximum of 1MB input length. This was chosen because it aligns well with the IPFS IPLD, Storm, and BitTorrent frontends. These segments are tracked and combined separately using catalog files, which may also store additional metadata about the files needed for specific storage frontends. Chunks are used for error correction, and can be stored separately on separate volumes. Slices are relevant to stream verification, are hardcoded to be 1KB in size, and are also a reference to Rust byte slices (references to an array of unsighted 8-bit integers).
 
-In summary: File of n MB -> n MB / 1MB Catalog Segments -> 8x Zfec Chunks -> >=16MB / 8x / 1024 Byte Slices
+In summary: File of n MB -> n MB / 1MB Catalog Segments -> 8x Zfec Chunks -> >=1MB / 8x / 1024 Byte Slices
 
 Only chunks are stored separately on-disk. Slices are referenced in-memory, and how segments are streamed is frontend-specific. Segmentation also helps with computational parallelization, reduces node memory requirements, and helps spread IO load across storage volumes.
