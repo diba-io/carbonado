@@ -6,17 +6,12 @@ use std::{
 
 use anyhow::{anyhow, Error, Result};
 use bao::Hash;
-use secp256k1::{schnorr::Signature, KeyPair, Message, PublicKey, Secp256k1};
+use secp256k1::{ecdsa::Signature, KeyPair, Message, PublicKey, Secp256k1};
 
 use crate::{
     constants::{Format, MAGICNO},
     utils::{decode_bao_hash, encode_bao_hash},
 };
-
-/// 160 bytes should be added for Carbonado headers.
-pub fn header_len() -> u64 {
-    12 + 33 + 32 + 64 + 1 + 1 + 4 + 4 + 9
-}
 
 /// Contains deserialized copies of the data kept in the Carbonado header.
 #[derive(Debug)]
@@ -53,7 +48,7 @@ impl TryFrom<File> for Header {
 
         file.rewind()?;
 
-        let mut handle = file.take(header_len());
+        let mut handle = file.take(Header::len());
         handle.read_exact(&mut magic_no)?;
         handle.read_exact(&mut pubkey)?;
         handle.read_exact(&mut hash)?;
@@ -70,11 +65,10 @@ impl TryFrom<File> for Header {
         }
 
         let pubkey = PublicKey::from_slice(&pubkey)?;
-        let signature = Signature::from_slice(&signature)?;
+        let signature = Signature::from_compact(&signature)?;
 
         // Verify hash against signature
-        let (x_only_pk, _) = pubkey.x_only_public_key();
-        signature.verify(&Message::from_slice(&hash)?, &x_only_pk)?;
+        signature.verify(&Message::from_slice(&hash)?, &pubkey)?;
 
         let hash = bao::Hash::try_from(hash)?;
 
@@ -96,6 +90,11 @@ impl TryFrom<File> for Header {
 }
 
 impl Header {
+    /// 160 bytes should be added for Carbonado headers.
+    pub fn len() -> u64 {
+        12 + 33 + 32 + 64 + 1 + 1 + 4 + 4 + 9
+    }
+
     /// Creates a new Carbonado Header struct using the provided parameters, using provided serialized primitives.
     pub fn new(
         sk: &[u8],
@@ -108,7 +107,7 @@ impl Header {
         let secp = Secp256k1::new();
         let keypair = KeyPair::from_seckey_slice(&secp, sk)?;
         let msg = Message::from_slice(hash)?;
-        let signature = keypair.sign_schnorr(msg);
+        let signature = keypair.secret_key().sign_ecdsa(msg);
         let pubkey = PublicKey::from_keypair(&keypair);
         let hash = decode_bao_hash(hash)?;
 
@@ -133,9 +132,12 @@ impl Header {
         if hash_bytes.len() != 32 {
             return Err(anyhow!("Hash bytes were not of expected length."));
         }
-        let mut signature_bytes = hex::decode(self.signature.to_string()).expect("hex encoded"); // 64 bytes
+        let mut signature_bytes = self.signature.serialize_compact().to_vec(); // 64 bytes
         if signature_bytes.len() != 64 {
-            return Err(anyhow!("Signature bytes were not of expected length."));
+            return Err(anyhow!(
+                "Signature bytes were not of expected length. Length was: {}",
+                signature_bytes.len()
+            ));
         }
         let mut format_bytes = self.format.bits().to_le_bytes().to_vec(); // 1 byte
         let mut chunk_index = self.chunk_index.to_le_bytes().to_vec(); // 1 byte
@@ -155,7 +157,7 @@ impl Header {
         header.append(&mut padding_bytes);
         header.append(&mut header_padding);
 
-        if header.len() != header_len() as usize {
+        if header.len() != Header::len() as usize {
             return Err(anyhow!("Invalid header length calculation"));
         }
 
