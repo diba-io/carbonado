@@ -30,3 +30,4 @@ zfec-rs = "0.1.0"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3"
+rand = "0.8.5"

@@ -4,9 +4,9 @@ use anyhow::Result;
 use carbonado::{
     constants::Format, decode, encode, fs::Header, structs::Encoded, utils::init_logging,
 };
-use ecies::utils::generate_keypair;
 use log::{debug, info, trace};
-use secp256k1::PublicKey;
+use rand::thread_rng;
+use secp256k1::{ecdh::SharedSecret, generate_keypair, PublicKey, Secp256k1, SecretKey};
 use wasm_bindgen_test::wasm_bindgen_test_configure;
 
 wasm_bindgen_test_configure!(run_in_browser);
@@ -18,9 +18,16 @@ fn format() -> Result<()> {
     init_logging(RUST_LOG);
 
     let input = "Hello world!".as_bytes();
-    let (sk, pk) = generate_keypair();
     let carbonado_level = 15;
     let format = Format::try_from(carbonado_level)?;
+
+    let (_file_sk, file_pk) = generate_keypair(&mut thread_rng());
+    let (node_sk, _node_pk) = generate_keypair(&mut thread_rng());
+    let ss = SharedSecret::new(&file_pk, &node_sk);
+
+    let secp = Secp256k1::new();
+    let sk = SecretKey::from_slice(&ss.secret_bytes())?;
+    let pk = PublicKey::from_secret_key(&secp, &sk);
 
     info!("Encoding input: {input:?}...");
     let Encoded(encoded, hash, encode_info) = encode(&pk.serialize(), input, carbonado_level)?;
@@ -28,7 +35,7 @@ fn format() -> Result<()> {
     debug!("Encoding Info: {encode_info:#?}");
 
     let header = Header::new(
-        &sk.serialize(),
+        &sk.secret_bytes(),
         hash.as_bytes(),
         format,
         0,
@@ -53,10 +60,7 @@ fn format() -> Result<()> {
     info!("Parsing file headers...");
     let header = Header::try_from(file)?;
 
-    assert_eq!(
-        header.pubkey,
-        PublicKey::from_slice(&pk.serialize_compressed())?
-    );
+    assert_eq!(header.pubkey, PublicKey::from_slice(&pk.serialize())?);
     assert_eq!(header.hash, hash);
     assert_eq!(header.format, format);
     assert_eq!(header.chunk_index, 0);
@@ -64,7 +68,7 @@ fn format() -> Result<()> {
 
     info!("Decoding Carbonado bytes");
     let decoded = decode(
-        &sk.serialize(),
+        &sk.secret_bytes(),
         hash.as_bytes(),
         &encoded,
         encode_info.padding_len,
