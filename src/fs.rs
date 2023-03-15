@@ -6,6 +6,11 @@ use std::{
 
 use anyhow::{anyhow, Error, Result};
 use bao::Hash;
+use nom::{
+    bytes::complete::take,
+    number::complete::{le_u32, le_u8},
+    IResult,
+};
 use secp256k1::{ecdsa::Signature, KeyPair, Message, PublicKey, Secp256k1};
 
 use crate::{
@@ -76,6 +81,43 @@ impl TryFrom<File> for Header {
         let chunk_index = u8::from_le_bytes(chunk_index);
         let encoded_len = u32::from_le_bytes(encoded_len);
         let padding_len = u32::from_le_bytes(padding_len);
+
+        Ok(Header {
+            pubkey,
+            hash,
+            signature,
+            format,
+            chunk_index,
+            encoded_len,
+            padding_len,
+        })
+    }
+}
+
+impl TryFrom<&[u8]> for Header {
+    type Error = Error;
+
+    /// Attempts to decode a header from a file.
+    fn try_from(bytes: &[u8]) -> Result<Self> {
+        let (_, (magic_no, pubkey, hash, signature, format, chunk_index, encoded_len, padding_len)) =
+            Header::parse_bytes(bytes).unwrap();
+
+        if magic_no != MAGICNO {
+            return Err(anyhow!(
+                "File header lacks Carbonado magic number and may not be a proper Carbonado file. Magic number found was {:#?}.", magic_no
+            ));
+        }
+
+        let pubkey = PublicKey::from_slice(pubkey)?;
+        let signature = Signature::from_compact(signature)?;
+
+        // Verify hash against signature
+        signature.verify(&Message::from_slice(hash)?, &pubkey)?;
+
+        let hash: [u8; 32] = hash[0..32].try_into()?;
+        let hash = bao::Hash::try_from(hash)?;
+
+        let format = Format::try_from(format)?;
 
         Ok(Header {
             pubkey,
@@ -169,5 +211,31 @@ impl Header {
         let hash = encode_bao_hash(&self.hash);
         let fmt = self.format.bits();
         format!("{hash}.c{fmt}")
+    }
+
+    #[allow(clippy::type_complexity)]
+    fn parse_bytes(b: &[u8]) -> IResult<&[u8], (&[u8], &[u8], &[u8], &[u8], u8, u8, u32, u32)> {
+        let (b, magic_no) = take(12u8)(b)?;
+        let (b, pubkey) = take(33u8)(b)?;
+        let (b, hash) = take(32u8)(b)?;
+        let (b, signature) = take(64u8)(b)?;
+        let (b, format) = le_u8(b)?;
+        let (b, chunk_index) = le_u8(b)?;
+        let (b, encoded_len) = le_u32(b)?;
+        let (b, padding_len) = le_u32(b)?;
+
+        Ok((
+            b,
+            (
+                magic_no,
+                pubkey,
+                hash,
+                signature,
+                format,
+                chunk_index,
+                encoded_len,
+                padding_len,
+            ),
+        ))
     }
 }
