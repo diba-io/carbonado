@@ -19,7 +19,7 @@ use crate::{
 };
 
 /// Contains deserialized copies of the data kept in the Carbonado header.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Header {
     /// A secp256k1 compressed public key is 33 bytes.
     pub pubkey: PublicKey,
