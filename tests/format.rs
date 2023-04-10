@@ -21,9 +21,18 @@ fn format() -> Result<()> {
     let carbonado_level = 15;
     let format = Format::try_from(carbonado_level)?;
 
-    let (_file_sk, file_pk) = generate_keypair(&mut thread_rng());
-    let (node_sk, _node_pk) = generate_keypair(&mut thread_rng());
+    let (file_sk, file_pk) = generate_keypair(&mut thread_rng());
+    let (node_sk, node_pk) = generate_keypair(&mut thread_rng());
     let ss = SharedSecret::new(&file_pk, &node_sk);
+
+    debug!(
+        "file_sk: {} file_pk: {} node_sk: {} node_pk: {} shared_secret: {}",
+        file_sk.display_secret(),
+        file_pk,
+        node_sk.display_secret(),
+        node_pk,
+        ss.display_secret()
+    );
 
     let secp = Secp256k1::new();
     let sk = SecretKey::from_slice(&ss.secret_bytes())?;
