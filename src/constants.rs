@@ -1,4 +1,10 @@
 use bitmask_enum::bitmask;
+use serde::{Deserialize, Serialize};
+
+/// "Magic number" used by the Carbonado file format. 12 bytes: "CARBONADO", and a version, 00, plus a newline character
+pub const MAGICNO: [u8; 12] = [
+    b'C', b'A', b'R', b'B', b'O', b'N', b'A', b'D', b'O', b'0', b'0', b'\n',
+];
 
 /// Bao slice length
 pub const SLICE_LEN: u16 = 1024;
@@ -43,14 +49,10 @@ pub const FEC_M: usize = 8;
 ///
 /// Any data that is verifiable but also unencrypted is instead signed by the local key. This is good for signed compiled binaries or hosted web content.
 #[bitmask(u8)]
+#[derive(Serialize, Deserialize)]
 pub enum Format {
     Ecies,
     Snappy,
     Bao,
     Zfec,
 }
-
-/// "Magic number" used by the Carbonado file format. 12 bytes: "CARBONADO", and a version, 00, plus a newline character
-pub const MAGICNO: [u8; 12] = [
-    b'C', b'A', b'R', b'B', b'O', b'N', b'A', b'D', b'O', b'0', b'0', b'\n',
-];

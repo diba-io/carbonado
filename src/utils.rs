@@ -1,6 +1,6 @@
 use std::sync::Once;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use bao::Hash;
 use bech32::{decode, encode, FromBase32, ToBase32, Variant};
 use log::trace;
@@ -30,8 +30,16 @@ pub fn encode_bao_hash(hash: &Hash) -> String {
 
 /// Decodes a Bao hash from a hexadecimal string.
 pub fn decode_bao_hash(hash: &[u8]) -> Result<Hash> {
-    let hash_array: [u8; bao::HASH_SIZE] = hash[..].try_into()?;
-    Ok(hash_array.into())
+    if hash.len() != bao::HASH_SIZE {
+        Err(anyhow!(
+            "Hash must be {} bytes long, an input of {} bytes was provided.",
+            bao::HASH_SIZE,
+            hash.len()
+        ))
+    } else {
+        let hash_array: [u8; bao::HASH_SIZE] = hash[..].try_into()?;
+        Ok(hash_array.into())
+    }
 }
 
 /// Calculate padding (find a length that divides evenly both by Zfec FEC_K and Bao SLICE_LEN, then find the difference).
