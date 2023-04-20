@@ -10,25 +10,25 @@ repository = "https://github.com/diba-io/carbonado.git"
 include = ["src/**/*", "LICENSE", "README.md"]
 
 [dependencies]
-anyhow = "1"
+anyhow = "1.0.70"
 bao = "0.12.1"
-bech32 = "0.9"
+bech32 = "0.9.1"
 bitmask-enum = "2.1.0"
 ecies = { version = "0.2.3", default-features = false, features = ["pure"] }
-hex = "0.4"
-log = "0.4"
+hex = "0.4.3"
+log = "0.4.17"
 nom = "7.1.3"
-pretty_env_logger = "0.4"
-secp256k1 = { version = "0.26.0", features = [
+pretty_env_logger = "0.4.0"
+secp256k1 = { version = "0.27.0", features = [
     "global-context",
     "rand-std",
     "bitcoin-hashes-std",
     "serde",
 ] }
-serde = "1"
-snap = "1"
+serde = "1.0.160"
+snap = "1.1.0"
 zfec-rs = "0.1.0"
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3"
+wasm-bindgen-test = "0.3.34"
 rand = "0.8.5"
