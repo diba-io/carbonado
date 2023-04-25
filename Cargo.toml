@@ -30,5 +30,5 @@ snap = "1.1.0"
 zfec-rs = "0.1.0"
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.34"
 rand = "0.8.5"
+wasm-bindgen-test = "0.3.34"
