@@ -2,7 +2,7 @@ use std::{fs::OpenOptions, io::Write, path::PathBuf};
 
 use anyhow::Result;
 use carbonado::{
-    constants::Format, decode, encode, fs::Header, structs::Encoded, utils::init_logging,
+    constants::Format, decode, encode, file::Header, structs::Encoded, utils::init_logging,
 };
 use log::{debug, info, trace};
 use rand::thread_rng;
@@ -45,6 +45,7 @@ fn format() -> Result<()> {
 
     let header = Header::new(
         &sk.secret_bytes(),
+        &pk.serialize(),
         hash.as_bytes(),
         format,
         0,
