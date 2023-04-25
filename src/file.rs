@@ -16,7 +16,7 @@ use secp256k1::{ecdsa::Signature, Message, PublicKey, SecretKey};
 use crate::{
     constants::{Format, MAGICNO},
     decoding, encoding,
-    structs::Encoded,
+    structs::{EncodeInfo, Encoded},
     utils::{decode_bao_hash, encode_bao_hash},
 };
 
@@ -255,7 +255,12 @@ pub fn decode(secret_key: &[u8], encoded: &[u8]) -> Result<(Header, Vec<u8>)> {
     Ok((header, decoded))
 }
 
-pub fn encode(sk: &[u8], pk: Option<&[u8]>, input: &[u8], level: u8) -> Result<Vec<u8>> {
+pub fn encode(
+    sk: &[u8],
+    pk: Option<&[u8]>,
+    input: &[u8],
+    level: u8,
+) -> Result<(Vec<u8>, EncodeInfo)> {
     let pubkey = match pk {
         Some(pubkey) => PublicKey::from_slice(pubkey)?,
         None => PublicKey::from_secret_key_global(&SecretKey::from_slice(sk)?),
@@ -278,5 +283,5 @@ pub fn encode(sk: &[u8], pk: Option<&[u8]>, input: &[u8], level: u8) -> Result<V
     let mut body = header.try_to_vec()?;
     body.append(&mut encoded);
 
-    Ok(body)
+    Ok((body, encode_info))
 }
