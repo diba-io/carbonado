@@ -39,11 +39,11 @@ pub struct Header {
     pub padding_len: u32,
 }
 
-impl TryFrom<File> for Header {
+impl TryFrom<&File> for Header {
     type Error = Error;
 
     /// Attempts to decode a header from a file.
-    fn try_from(mut file: File) -> Result<Self> {
+    fn try_from(mut file: &File) -> Result<Self> {
         let mut magic_no = [0_u8; 12];
         let mut pubkey = [0_u8; 33];
         let mut hash = [0_u8; 32];
