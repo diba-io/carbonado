@@ -68,7 +68,7 @@ fn format() -> Result<()> {
     info!("Test file successfully written.");
 
     info!("Parsing file headers...");
-    let header = Header::try_from(file)?;
+    let header = Header::try_from(&file)?;
 
     assert_eq!(header.pubkey, PublicKey::from_slice(&pk.serialize())?);
     assert_eq!(header.hash, hash);
