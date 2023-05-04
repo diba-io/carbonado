@@ -11,10 +11,12 @@ use nom::{
     number::complete::{le_u32, le_u8},
     IResult,
 };
-use secp256k1::{ecdsa::Signature, KeyPair, Message, PublicKey, Secp256k1};
+use secp256k1::{ecdsa::Signature, Message, PublicKey, SecretKey};
 
 use crate::{
     constants::{Format, MAGICNO},
+    decoding, encoding,
+    structs::{EncodeInfo, Encoded},
     utils::{decode_bao_hash, encode_bao_hash},
 };
 
@@ -53,7 +55,7 @@ impl TryFrom<File> for Header {
 
         file.rewind()?;
 
-        let mut handle = file.take(Header::len());
+        let mut handle = file.take(Header::len() as u64);
         handle.read_exact(&mut magic_no)?;
         handle.read_exact(&mut pubkey)?;
         handle.read_exact(&mut hash)?;
@@ -133,24 +135,23 @@ impl TryFrom<&[u8]> for Header {
 
 impl Header {
     /// 160 bytes should be added for Carbonado headers.
-    pub fn len() -> u64 {
+    pub fn len() -> usize {
         12 + 33 + 32 + 64 + 1 + 1 + 4 + 4 + 9
     }
 
     /// Creates a new Carbonado Header struct using the provided parameters, using provided serialized primitives.
     pub fn new(
         sk: &[u8],
+        pk: &[u8],
         hash: &[u8],
         format: Format,
         chunk_index: u8,
         encoded_len: u32,
         padding_len: u32,
     ) -> Result<Self> {
-        let secp = Secp256k1::new();
-        let keypair = KeyPair::from_seckey_slice(&secp, sk)?;
         let msg = Message::from_slice(hash)?;
-        let signature = keypair.secret_key().sign_ecdsa(msg);
-        let pubkey = PublicKey::from_keypair(&keypair);
+        let pubkey = PublicKey::from_slice(pk)?;
+        let signature = SecretKey::from_slice(sk)?.sign_ecdsa(msg);
         let hash = decode_bao_hash(hash)?;
 
         Ok(Header {
@@ -199,7 +200,7 @@ impl Header {
         header.append(&mut padding_bytes);
         header.append(&mut header_padding);
 
-        if header.len() != Header::len() as usize {
+        if header.len() != Header::len() {
             return Err(anyhow!("Invalid header length calculation"));
         }
 
@@ -238,4 +239,49 @@ impl Header {
             ),
         ))
     }
+}
+
+pub fn decode(secret_key: &[u8], encoded: &[u8]) -> Result<(Header, Vec<u8>)> {
+    let (header, body) = encoded.split_at(Header::len());
+    let header = Header::try_from(header)?;
+    let decoded = decoding::decode(
+        secret_key,
+        header.hash.as_bytes(),
+        body,
+        header.padding_len,
+        header.format.into(),
+    )?;
+
+    Ok((header, decoded))
+}
+
+pub fn encode(
+    sk: &[u8],
+    pk: Option<&[u8]>,
+    input: &[u8],
+    level: u8,
+) -> Result<(Vec<u8>, EncodeInfo)> {
+    let pubkey = match pk {
+        Some(pubkey) => PublicKey::from_slice(pubkey)?,
+        None => PublicKey::from_secret_key_global(&SecretKey::from_slice(sk)?),
+    }
+    .serialize();
+
+    let Encoded(mut encoded, hash, encode_info) = encoding::encode(&pubkey, input, level)?;
+
+    let format = Format::try_from(level)?;
+    let header = Header::new(
+        sk,
+        &pubkey,
+        hash.as_bytes(),
+        format,
+        0,
+        encode_info.output_len,
+        encode_info.padding_len,
+    )?;
+
+    let mut body = header.try_to_vec()?;
+    body.append(&mut encoded);
+
+    Ok((body, encode_info))
 }
