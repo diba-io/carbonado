@@ -6,6 +6,7 @@ use std::{
 
 use anyhow::{anyhow, Error, Result};
 use bao::Hash;
+use bytes::Bytes;
 use nom::{
     bytes::complete::take,
     number::complete::{le_u32, le_u8},
@@ -103,6 +104,43 @@ impl TryFrom<&[u8]> for Header {
     fn try_from(bytes: &[u8]) -> Result<Self> {
         let (_, (magic_no, pubkey, hash, signature, format, chunk_index, encoded_len, padding_len)) =
             Header::parse_bytes(bytes).unwrap();
+
+        if magic_no != MAGICNO {
+            return Err(anyhow!(
+                "File header lacks Carbonado magic number and may not be a proper Carbonado file. Magic number found was {:#?}.", magic_no
+            ));
+        }
+
+        let pubkey = PublicKey::from_slice(pubkey)?;
+        let signature = Signature::from_compact(signature)?;
+
+        // Verify hash against signature
+        signature.verify(&Message::from_slice(hash)?, &pubkey)?;
+
+        let hash: [u8; 32] = hash[0..32].try_into()?;
+        let hash = bao::Hash::try_from(hash)?;
+
+        let format = Format::try_from(format)?;
+
+        Ok(Header {
+            pubkey,
+            hash,
+            signature,
+            format,
+            chunk_index,
+            encoded_len,
+            padding_len,
+        })
+    }
+}
+
+impl TryFrom<Bytes> for Header {
+    type Error = Error;
+
+    /// Attempts to decode a header from a file.
+    fn try_from(bytes: Bytes) -> Result<Self> {
+        let (_, (magic_no, pubkey, hash, signature, format, chunk_index, encoded_len, padding_len)) =
+            Header::parse_bytes(&bytes).unwrap();
 
         if magic_no != MAGICNO {
             return Err(anyhow!(
