@@ -97,6 +97,64 @@ impl TryFrom<&File> for Header {
     }
 }
 
+#[cfg(feature = "tokio")]
+impl TryFrom<&tokio::fs::File> for Header {
+    type Error = Error;
+
+    /// Attempts to decode a header from a file.
+    fn try_from(mut file: &tokio::fs::File) -> Result<Self> {
+        let mut magic_no = [0_u8; 12];
+        let mut pubkey = [0_u8; 33];
+        let mut hash = [0_u8; 32];
+        let mut signature = [0_u8; 64];
+        let mut format = [0_u8; 1];
+        let mut chunk_index = [0_u8; 1];
+        let mut encoded_len = [0_u8; 4];
+        let mut padding_len = [0_u8; 4];
+
+        file.rewind()?;
+
+        let mut handle = file.take(Header::len() as u64);
+        handle.read_exact(&mut magic_no)?;
+        handle.read_exact(&mut pubkey)?;
+        handle.read_exact(&mut hash)?;
+        handle.read_exact(&mut signature)?;
+        handle.read_exact(&mut format)?;
+        handle.read_exact(&mut chunk_index)?;
+        handle.read_exact(&mut encoded_len)?;
+        handle.read_exact(&mut padding_len)?;
+
+        if magic_no != MAGICNO {
+            return Err(anyhow!(
+                "File header lacks Carbonado magic number and may not be a proper Carbonado file. Magic number found was {:#?}.", magic_no
+            ));
+        }
+
+        let pubkey = PublicKey::from_slice(&pubkey)?;
+        let signature = Signature::from_compact(&signature)?;
+
+        // Verify hash against signature
+        signature.verify(&Message::from_slice(&hash)?, &pubkey)?;
+
+        let hash = bao::Hash::try_from(hash)?;
+
+        let format = Format::try_from(format[0])?;
+        let chunk_index = u8::from_le_bytes(chunk_index);
+        let encoded_len = u32::from_le_bytes(encoded_len);
+        let padding_len = u32::from_le_bytes(padding_len);
+
+        Ok(Header {
+            pubkey,
+            hash,
+            signature,
+            format,
+            chunk_index,
+            encoded_len,
+            padding_len,
+        })
+    }
+}
+
 impl TryFrom<&[u8]> for Header {
     type Error = Error;
 

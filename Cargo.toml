@@ -1,6 +1,6 @@
 [package]
 name = "carbonado"
-version = "0.3.0-rc.10"
+version = "0.3.0-rc.12"
 edition = "2021"
 license = "MIT"
 description = "An apocalypse-resistant data storage format for the truly paranoid."
@@ -28,8 +28,12 @@ secp256k1 = { version = "0.27.0", features = [
 ] }
 serde = "1.0.160"
 snap = "1.1.0"
+tokio = { version = "1.28.2", features = ["full"], optional = true }
 zfec-rs = "0.1.0"
 
 [dev-dependencies]
 rand = "0.8.5"
 wasm-bindgen-test = "0.3.34"
+
+[features]
+tokio-support = ["tokio"]
