@@ -38,6 +38,8 @@ pub struct Header {
     pub encoded_len: u32,
     /// Number of bytes added to pad to align zfec chunks and bao slices.
     pub padding_len: u32,
+    /// Bytes that are normally zero but can contain extra data if needed
+    pub metadata: Option<[u8; 8]>,
 }
 
 impl TryFrom<&File> for Header {
@@ -53,6 +55,7 @@ impl TryFrom<&File> for Header {
         let mut chunk_index = [0_u8; 1];
         let mut encoded_len = [0_u8; 4];
         let mut padding_len = [0_u8; 4];
+        let mut metadata = [0_u8; 8];
 
         file.rewind()?;
 
@@ -65,6 +68,7 @@ impl TryFrom<&File> for Header {
         handle.read_exact(&mut chunk_index)?;
         handle.read_exact(&mut encoded_len)?;
         handle.read_exact(&mut padding_len)?;
+        handle.read_exact(&mut metadata)?;
 
         if magic_no != MAGICNO {
             return Err(anyhow!(
@@ -93,6 +97,11 @@ impl TryFrom<&File> for Header {
             chunk_index,
             encoded_len,
             padding_len,
+            metadata: if metadata.iter().any(|b| b != &0) {
+                Some(metadata)
+            } else {
+                None
+            },
         })
     }
 }
@@ -102,8 +111,20 @@ impl TryFrom<&[u8]> for Header {
 
     /// Attempts to decode a header from a file.
     fn try_from(bytes: &[u8]) -> Result<Self> {
-        let (_, (magic_no, pubkey, hash, signature, format, chunk_index, encoded_len, padding_len)) =
-            Header::parse_bytes(bytes).unwrap();
+        let (
+            _,
+            (
+                magic_no,
+                pubkey,
+                hash,
+                signature,
+                format,
+                chunk_index,
+                encoded_len,
+                padding_len,
+                metadata,
+            ),
+        ) = Header::parse_bytes(bytes).unwrap();
 
         if magic_no != MAGICNO {
             return Err(anyhow!(
@@ -130,6 +151,7 @@ impl TryFrom<&[u8]> for Header {
             chunk_index,
             encoded_len,
             padding_len,
+            metadata,
         })
     }
 }
@@ -139,8 +161,20 @@ impl TryFrom<Bytes> for Header {
 
     /// Attempts to decode a header from a file.
     fn try_from(bytes: Bytes) -> Result<Self> {
-        let (_, (magic_no, pubkey, hash, signature, format, chunk_index, encoded_len, padding_len)) =
-            Header::parse_bytes(&bytes).unwrap();
+        let (
+            _,
+            (
+                magic_no,
+                pubkey,
+                hash,
+                signature,
+                format,
+                chunk_index,
+                encoded_len,
+                padding_len,
+                metadata,
+            ),
+        ) = Header::parse_bytes(&bytes).unwrap();
 
         if magic_no != MAGICNO {
             return Err(anyhow!(
@@ -167,6 +201,7 @@ impl TryFrom<Bytes> for Header {
             chunk_index,
             encoded_len,
             padding_len,
+            metadata,
         })
     }
 }
@@ -176,8 +211,20 @@ impl TryFrom<&Bytes> for Header {
 
     /// Attempts to decode a header from a file.
     fn try_from(bytes: &Bytes) -> Result<Self> {
-        let (_, (magic_no, pubkey, hash, signature, format, chunk_index, encoded_len, padding_len)) =
-            Header::parse_bytes(bytes).unwrap();
+        let (
+            _,
+            (
+                magic_no,
+                pubkey,
+                hash,
+                signature,
+                format,
+                chunk_index,
+                encoded_len,
+                padding_len,
+                metadata,
+            ),
+        ) = Header::parse_bytes(bytes).unwrap();
 
         if magic_no != MAGICNO {
             return Err(anyhow!(
@@ -204,6 +251,7 @@ impl TryFrom<&Bytes> for Header {
             chunk_index,
             encoded_len,
             padding_len,
+            metadata,
         })
     }
 }
@@ -211,10 +259,11 @@ impl TryFrom<&Bytes> for Header {
 impl Header {
     /// 160 bytes should be added for Carbonado headers.
     pub fn len() -> usize {
-        12 + 33 + 32 + 64 + 1 + 1 + 4 + 4 + 9
+        12 + 33 + 32 + 64 + 1 + 1 + 4 + 4 + 8 + 1
     }
 
     /// Creates a new Carbonado Header struct using the provided parameters, using provided serialized primitives.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         sk: &[u8],
         pk: &[u8],
@@ -223,6 +272,7 @@ impl Header {
         chunk_index: u8,
         encoded_len: u32,
         padding_len: u32,
+        metadata: Option<[u8; 8]>,
     ) -> Result<Self> {
         let msg = Message::from_slice(hash)?;
         let pubkey = PublicKey::from_slice(pk)?;
@@ -237,6 +287,7 @@ impl Header {
             chunk_index,
             encoded_len,
             padding_len,
+            metadata,
         })
     }
 
@@ -261,7 +312,12 @@ impl Header {
         let mut chunk_index = self.chunk_index.to_le_bytes().to_vec(); // 1 byte
         let mut encoded_len_bytes = self.encoded_len.to_le_bytes().to_vec(); // 8 bytes
         let mut padding_bytes = self.padding_len.to_le_bytes().to_vec(); // 2 bytes
-        let mut header_padding = vec![0_u8; 9];
+        let mut header_padding = if let Some(metadata) = self.metadata {
+            metadata.to_vec()
+        } else {
+            vec![0_u8; 8]
+        };
+        header_padding.push(0);
 
         let mut header = Vec::new();
 
@@ -290,7 +346,22 @@ impl Header {
     }
 
     #[allow(clippy::type_complexity)]
-    fn parse_bytes(b: &[u8]) -> IResult<&[u8], (&[u8], &[u8], &[u8], &[u8], u8, u8, u32, u32)> {
+    fn parse_bytes(
+        b: &[u8],
+    ) -> IResult<
+        &[u8],
+        (
+            &[u8],
+            &[u8],
+            &[u8],
+            &[u8],
+            u8,
+            u8,
+            u32,
+            u32,
+            Option<[u8; 8]>,
+        ),
+    > {
         let (b, magic_no) = take(12u8)(b)?;
         let (b, pubkey) = take(33u8)(b)?;
         let (b, hash) = take(32u8)(b)?;
@@ -299,6 +370,14 @@ impl Header {
         let (b, chunk_index) = le_u8(b)?;
         let (b, encoded_len) = le_u32(b)?;
         let (b, padding_len) = le_u32(b)?;
+        let (b, metadata) = take(8u8)(b)?;
+
+        let metadata: [u8; 8] = metadata.try_into().expect("8 bytes = 8 bytes");
+        let metadata = if metadata.iter().any(|b| b != &0) {
+            Some(metadata)
+        } else {
+            None
+        };
 
         Ok((
             b,
@@ -311,6 +390,7 @@ impl Header {
                 chunk_index,
                 encoded_len,
                 padding_len,
+                metadata,
             ),
         ))
     }
@@ -335,6 +415,7 @@ pub fn encode(
     pk: Option<&[u8]>,
     input: &[u8],
     level: u8,
+    metadata: Option<[u8; 8]>,
 ) -> Result<(Vec<u8>, EncodeInfo)> {
     let pubkey = match pk {
         Some(pubkey) => PublicKey::from_slice(pubkey)?,
@@ -353,6 +434,7 @@ pub fn encode(
         0,
         encode_info.output_len,
         encode_info.padding_len,
+        metadata,
     )?;
 
     let mut body = header.try_to_vec()?;
