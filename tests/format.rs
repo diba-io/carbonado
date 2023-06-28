@@ -51,6 +51,7 @@ fn format() -> Result<()> {
         0,
         encode_info.bytes_verifiable,
         encode_info.padding_len,
+        None,
     )?;
     trace!("Header: {header:#?}");
 
