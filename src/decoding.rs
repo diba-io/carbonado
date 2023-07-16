@@ -1,6 +1,5 @@
 use std::io::{Cursor, Read};
 
-use anyhow::{anyhow, Result};
 use bao::{
     decode::{decode as bao_decode, SliceDecoder},
     encode::SliceExtractor,
@@ -14,11 +13,12 @@ use zfec_rs::{Chunk, Fec};
 use crate::{
     constants::{Format, FEC_K, FEC_M, SLICE_LEN},
     encoding,
+    error::CarbonadoError,
     structs::EncodeInfo,
     utils::decode_bao_hash,
 };
 
-fn zfec_chunks(chunked_bytes: Vec<Vec<u8>>, padding: u32) -> Result<Vec<u8>> {
+fn zfec_chunks(chunked_bytes: Vec<Vec<u8>>, padding: u32) -> Result<Vec<u8>, CarbonadoError> {
     let mut zfec_chunks = vec![];
 
     for (i, chunk) in chunked_bytes.into_iter().enumerate() {
@@ -32,14 +32,12 @@ fn zfec_chunks(chunked_bytes: Vec<Vec<u8>>, padding: u32) -> Result<Vec<u8>> {
 }
 
 /// Zfec forward error correction decoding
-pub fn zfec(input: &[u8], padding: u32) -> Result<Vec<u8>> {
+pub fn zfec(input: &[u8], padding: u32) -> Result<Vec<u8>, CarbonadoError> {
     trace!("forward error correcting");
     let input_len = input.len();
 
     if input_len % FEC_M != 0 {
-        return Err(anyhow!(
-            "Input bytes must divide evenly over number of chunks"
-        ));
+        return Err(CarbonadoError::UnevenZfecChunks);
     }
 
     let chunks: Vec<Vec<u8>> = input
@@ -53,7 +51,7 @@ pub fn zfec(input: &[u8], padding: u32) -> Result<Vec<u8>> {
 }
 
 /// Bao stream extraction
-pub fn bao(input: &[u8], hash: &[u8]) -> Result<Vec<u8>> {
+pub fn bao(input: &[u8], hash: &[u8]) -> Result<Vec<u8>, CarbonadoError> {
     trace!("verifying");
     let hash = decode_bao_hash(hash)?;
     let decoded = bao_decode(input, &hash)?;
@@ -62,7 +60,7 @@ pub fn bao(input: &[u8], hash: &[u8]) -> Result<Vec<u8>> {
 }
 
 /// Ecies decryption
-pub fn ecies(input: &[u8], secret_key: &[u8]) -> Result<Vec<u8>> {
+pub fn ecies(input: &[u8], secret_key: &[u8]) -> Result<Vec<u8>, CarbonadoError> {
     trace!("decrypting");
     let decrypted = decrypt(secret_key, input)?;
 
@@ -70,7 +68,7 @@ pub fn ecies(input: &[u8], secret_key: &[u8]) -> Result<Vec<u8>> {
 }
 
 /// Snappy decompression
-pub fn snap(input: &[u8]) -> Result<Vec<u8>> {
+pub fn snap(input: &[u8]) -> Result<Vec<u8>, CarbonadoError> {
     trace!("decompressing");
     let mut decompressed = vec![];
     FrameDecoder::new(input).read_to_end(&mut decompressed)?;
@@ -85,7 +83,7 @@ pub fn decode(
     input: &[u8],
     padding: u32,
     format: u8,
-) -> Result<Vec<u8>> {
+) -> Result<Vec<u8>, CarbonadoError> {
     let format = Format::try_from(format)?;
 
     let verified = if format.contains(Format::Bao) {
@@ -118,7 +116,7 @@ pub fn decode(
 /// Extract a 1KB slice of a Bao stream at a specific index.
 ///
 /// This helps for periodic verification.
-pub fn extract_slice(encoded: &[u8], index: u16) -> Result<Vec<u8>> {
+pub fn extract_slice(encoded: &[u8], index: u16) -> Result<Vec<u8>, CarbonadoError> {
     let slice_start = index * SLICE_LEN;
     let encoded_cursor = Cursor::new(&encoded);
     let mut extractor = SliceExtractor::new(encoded_cursor, slice_start as u64, SLICE_LEN as u64);
@@ -131,7 +129,12 @@ pub fn extract_slice(encoded: &[u8], index: u16) -> Result<Vec<u8>> {
 /// Verify a number of 1KB slices of a Bao stream starting at a specific index.
 ///
 /// This is limited to u16 indices, because segments are intended to be no larger than 4MB.
-pub fn verify_slice(hash: &Hash, input: &[u8], index: u16, count: u16) -> Result<Vec<u8>> {
+pub fn verify_slice(
+    hash: &Hash,
+    input: &[u8],
+    index: u16,
+    count: u16,
+) -> Result<Vec<u8>, CarbonadoError> {
     let slice_start = index as u64 * SLICE_LEN as u64;
     let slice_len = count as u64 * SLICE_LEN as u64;
     trace!("Verify slice start: {slice_start} len: {slice_len}");
@@ -153,14 +156,18 @@ pub fn verify_slice(hash: &Hash, input: &[u8], index: u16, count: u16) -> Result
 ///
 /// TODO: At present, this method is not deterministic, so data larger than 8KB cannot be reencoded.
 /// This is still useful for data recovery, but it requires interactivity with storage clients.
-pub fn scrub(input: &[u8], hash: &[u8], encode_info: &EncodeInfo) -> Result<Vec<u8>> {
+pub fn scrub(
+    input: &[u8],
+    hash: &[u8],
+    encode_info: &EncodeInfo,
+) -> Result<Vec<u8>, CarbonadoError> {
     let hash = decode_bao_hash(hash)?;
     let chunk_size = encode_info.chunk_len;
     let padding = encode_info.padding_len;
     let slices_per_chunk = (chunk_size / SLICE_LEN as u32) as u16;
 
     match bao_decode(input, &hash) {
-        Ok(_decoded) => Err(anyhow!("Data does not need to be scrubbed.")),
+        Ok(_decoded) => Err(CarbonadoError::UnnecessaryScrub),
         Err(e) => {
             warn!("Data failed to verify with error: {e}. Scrubbing...");
             let mut chunks = vec![];
@@ -183,21 +190,20 @@ pub fn scrub(input: &[u8], hash: &[u8], encode_info: &EncodeInfo) -> Result<Vec<
 
             let (scrubbed, scrubbed_padding, _) = encoding::zfec(&decoded)?;
             if padding != scrubbed_padding {
-                return Err(anyhow!("Scrubbed padding should remain the same"));
+                return Err(CarbonadoError::ScrubbedPaddingMismatch);
             }
 
             let (verifiable, scrubbed_hash) = encoding::bao(&scrubbed)?;
 
             if input.len() != verifiable.len() {
-                return Err(anyhow!(
-                    "Mismatch, input len: {}, scrubbed len: {}",
+                return Err(CarbonadoError::ScrubbedLengthMismatch(
                     input.len(),
-                    verifiable.len()
+                    verifiable.len(),
                 ));
             }
 
             if hash != scrubbed_hash {
-                return Err(anyhow!("Scrubbed hash is not equal to original hash"));
+                return Err(CarbonadoError::InvalidScrubbedHash);
             }
 
             Ok(verifiable)

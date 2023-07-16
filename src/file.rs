@@ -4,7 +4,6 @@ use std::{
     io::{Read, Seek},
 };
 
-use anyhow::{anyhow, Error, Result};
 use bao::Hash;
 use bytes::Bytes;
 use nom::{
@@ -17,6 +16,7 @@ use secp256k1::{ecdsa::Signature, Message, PublicKey, SecretKey};
 use crate::{
     constants::{Format, MAGICNO},
     decoding, encoding,
+    error::CarbonadoError,
     structs::{EncodeInfo, Encoded},
     utils::{decode_bao_hash, encode_bao_hash},
 };
@@ -43,10 +43,10 @@ pub struct Header {
 }
 
 impl TryFrom<&File> for Header {
-    type Error = Error;
+    type Error = CarbonadoError;
 
     /// Attempts to decode a header from a file.
-    fn try_from(mut file: &File) -> Result<Self> {
+    fn try_from(mut file: &File) -> Result<Self, CarbonadoError> {
         let mut magic_no = [0_u8; 12];
         let mut pubkey = [0_u8; 33];
         let mut hash = [0_u8; 32];
@@ -71,9 +71,7 @@ impl TryFrom<&File> for Header {
         handle.read_exact(&mut metadata)?;
 
         if magic_no != MAGICNO {
-            return Err(anyhow!(
-                "File header lacks Carbonado magic number and may not be a proper Carbonado file. Magic number found was {:#?}.", magic_no
-            ));
+            return Err(CarbonadoError::InvalidMagicNumber(format!("{magic_no:#?}")));
         }
 
         let pubkey = PublicKey::from_slice(&pubkey)?;
@@ -107,10 +105,10 @@ impl TryFrom<&File> for Header {
 }
 
 impl TryFrom<&[u8]> for Header {
-    type Error = Error;
+    type Error = CarbonadoError;
 
     /// Attempts to decode a header from a file.
-    fn try_from(bytes: &[u8]) -> Result<Self> {
+    fn try_from(bytes: &[u8]) -> Result<Self, CarbonadoError> {
         let (
             _,
             (
@@ -127,9 +125,7 @@ impl TryFrom<&[u8]> for Header {
         ) = Header::parse_bytes(bytes).unwrap();
 
         if magic_no != MAGICNO {
-            return Err(anyhow!(
-                "File header lacks Carbonado magic number and may not be a proper Carbonado file. Magic number found was {:#?}.", magic_no
-            ));
+            return Err(CarbonadoError::InvalidMagicNumber(format!("{magic_no:#?}")));
         }
 
         let pubkey = PublicKey::from_slice(pubkey)?;
@@ -157,10 +153,10 @@ impl TryFrom<&[u8]> for Header {
 }
 
 impl TryFrom<Bytes> for Header {
-    type Error = Error;
+    type Error = CarbonadoError;
 
     /// Attempts to decode a header from a file.
-    fn try_from(bytes: Bytes) -> Result<Self> {
+    fn try_from(bytes: Bytes) -> Result<Self, CarbonadoError> {
         let (
             _,
             (
@@ -177,9 +173,7 @@ impl TryFrom<Bytes> for Header {
         ) = Header::parse_bytes(&bytes).unwrap();
 
         if magic_no != MAGICNO {
-            return Err(anyhow!(
-                "File header lacks Carbonado magic number and may not be a proper Carbonado file. Magic number found was {:#?}.", magic_no
-            ));
+            return Err(CarbonadoError::InvalidMagicNumber(format!("{magic_no:#?}")));
         }
 
         let pubkey = PublicKey::from_slice(pubkey)?;
@@ -207,10 +201,10 @@ impl TryFrom<Bytes> for Header {
 }
 
 impl TryFrom<&Bytes> for Header {
-    type Error = Error;
+    type Error = CarbonadoError;
 
     /// Attempts to decode a header from a file.
-    fn try_from(bytes: &Bytes) -> Result<Self> {
+    fn try_from(bytes: &Bytes) -> Result<Self, CarbonadoError> {
         let (
             _,
             (
@@ -227,9 +221,7 @@ impl TryFrom<&Bytes> for Header {
         ) = Header::parse_bytes(bytes).unwrap();
 
         if magic_no != MAGICNO {
-            return Err(anyhow!(
-                "File header lacks Carbonado magic number and may not be a proper Carbonado file. Magic number found was {:#?}.", magic_no
-            ));
+            return Err(CarbonadoError::InvalidMagicNumber(format!("{magic_no:#?}")));
         }
 
         let pubkey = PublicKey::from_slice(pubkey)?;
@@ -273,7 +265,7 @@ impl Header {
         encoded_len: u32,
         padding_len: u32,
         metadata: Option<[u8; 8]>,
-    ) -> Result<Self> {
+    ) -> Result<Self, CarbonadoError> {
         let msg = Message::from_slice(hash)?;
         let pubkey = PublicKey::from_slice(pk)?;
         let signature = SecretKey::from_slice(sk)?.sign_ecdsa(msg);
@@ -292,20 +284,19 @@ impl Header {
     }
 
     /// Creates a header to be prepended to files.
-    pub fn try_to_vec(&self) -> Result<Vec<u8>> {
+    pub fn try_to_vec(&self) -> Result<Vec<u8>, CarbonadoError> {
         let mut pubkey_bytes = self.pubkey.serialize().to_vec(); // 33 bytes
         if pubkey_bytes.len() != 33 {
-            return Err(anyhow!("Pubkey did not serialize into expected length."));
+            return Err(CarbonadoError::PubkeySerializationError);
         }
         let mut hash_bytes = self.hash.as_bytes().to_vec(); // 32 bytes
         if hash_bytes.len() != 32 {
-            return Err(anyhow!("Hash bytes were not of expected length."));
+            return Err(CarbonadoError::HashBytesLengthError);
         }
         let mut signature_bytes = self.signature.serialize_compact().to_vec(); // 64 bytes
         if signature_bytes.len() != 64 {
-            return Err(anyhow!(
-                "Signature bytes were not of expected length. Length was: {}",
-                signature_bytes.len()
+            return Err(CarbonadoError::UnexpectedSignatureBytesLength(
+                signature_bytes.len(),
             ));
         }
         let mut format_bytes = self.format.bits().to_le_bytes().to_vec(); // 1 byte
@@ -332,7 +323,7 @@ impl Header {
         header.append(&mut header_padding);
 
         if header.len() != Header::len() {
-            return Err(anyhow!("Invalid header length calculation"));
+            return Err(CarbonadoError::InvalidHeaderLength);
         }
 
         Ok(header)
@@ -396,7 +387,7 @@ impl Header {
     }
 }
 
-pub fn decode(secret_key: &[u8], encoded: &[u8]) -> Result<(Header, Vec<u8>)> {
+pub fn decode(secret_key: &[u8], encoded: &[u8]) -> Result<(Header, Vec<u8>), CarbonadoError> {
     let (header, body) = encoded.split_at(Header::len());
     let header = Header::try_from(header)?;
     let decoded = decoding::decode(
@@ -416,7 +407,7 @@ pub fn encode(
     input: &[u8],
     level: u8,
     metadata: Option<[u8; 8]>,
-) -> Result<(Vec<u8>, EncodeInfo)> {
+) -> Result<(Vec<u8>, EncodeInfo), CarbonadoError> {
     let pubkey = match pk {
         Some(pubkey) => PublicKey::from_slice(pubkey)?,
         None => PublicKey::from_secret_key_global(&SecretKey::from_slice(sk)?),
