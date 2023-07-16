@@ -1,11 +1,13 @@
 use std::sync::Once;
 
-use anyhow::{anyhow, Result};
 use bao::Hash;
 use bech32::{decode, encode, FromBase32, ToBase32, Variant};
 use log::trace;
 
-use crate::constants::{FEC_K, SLICE_LEN};
+use crate::{
+    constants::{FEC_K, SLICE_LEN},
+    error::CarbonadoError,
+};
 
 static INIT: Once = Once::new();
 
@@ -29,13 +31,9 @@ pub fn encode_bao_hash(hash: &Hash) -> String {
 }
 
 /// Decodes a Bao hash from a hexadecimal string.
-pub fn decode_bao_hash(hash: &[u8]) -> Result<Hash> {
+pub fn decode_bao_hash(hash: &[u8]) -> Result<Hash, CarbonadoError> {
     if hash.len() != bao::HASH_SIZE {
-        Err(anyhow!(
-            "Hash must be {} bytes long, an input of {} bytes was provided.",
-            bao::HASH_SIZE,
-            hash.len()
-        ))
+        Err(CarbonadoError::HashDecodeError(bao::HASH_SIZE, hash.len()))
     } else {
         let hash_array: [u8; bao::HASH_SIZE] = hash[..].try_into()?;
         Ok(hash_array.into())
@@ -56,12 +54,12 @@ pub fn calc_padding_len(input_len: usize) -> (u32, u32) {
 }
 
 /// Helper for encoding data to bech32m.
-pub fn bech32m_encode(hrp: &str, bytes: &[u8]) -> Result<String> {
+pub fn bech32m_encode(hrp: &str, bytes: &[u8]) -> Result<String, CarbonadoError> {
     Ok(encode(hrp, bytes.to_base32(), Variant::Bech32m)?)
 }
 
 /// Helper for decoding bech32-encoded data.
-pub fn bech32_decode(bech32_str: &str) -> Result<(String, Vec<u8>, Variant)> {
+pub fn bech32_decode(bech32_str: &str) -> Result<(String, Vec<u8>, Variant), CarbonadoError> {
     let (hrp, words, variant) = decode(bech32_str)?;
     Ok((hrp, Vec::<u8>::from_base32(&words)?, variant))
 }

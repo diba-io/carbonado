@@ -15,6 +15,7 @@ pub mod utils;
 
 mod decoding;
 mod encoding;
+mod error;
 
 pub use encoding::encode;
 

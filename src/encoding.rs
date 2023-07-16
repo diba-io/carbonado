@@ -1,6 +1,5 @@
 use std::io::Write;
 
-use anyhow::{anyhow, Result};
 use bao::{encode::encode as bao_encode, Hash};
 use ecies::encrypt;
 use log::{debug, trace};
@@ -9,24 +8,27 @@ use zfec_rs::Fec;
 
 use crate::{
     constants::{Format, FEC_K, FEC_M, SLICE_LEN},
+    error::CarbonadoError,
     structs::{EncodeInfo, Encoded},
     utils::calc_padding_len,
 };
 
 /// Snappy compression
-pub fn snap(input: &[u8]) -> Result<Vec<u8>> {
+pub fn snap(input: &[u8]) -> Result<Vec<u8>, CarbonadoError> {
     trace!("compressing");
     let buffer: &[u8] = input;
     let output = vec![];
     let mut writer = FrameEncoder::new(output);
     writer.write_all(buffer)?;
-    let compressed = writer.into_inner()?;
+    let compressed = writer
+        .into_inner()
+        .map_err(|err| CarbonadoError::SnapWriteIntoInnerError(err.to_string()))?;
 
     Ok(compressed)
 }
 
 /// Ecies encryption
-pub fn ecies(pubkey: &[u8], input: &[u8]) -> Result<Vec<u8>> {
+pub fn ecies(pubkey: &[u8], input: &[u8]) -> Result<Vec<u8>, CarbonadoError> {
     trace!("encrypting");
     let encrypted = encrypt(pubkey, input)?;
 
@@ -34,7 +36,7 @@ pub fn ecies(pubkey: &[u8], input: &[u8]) -> Result<Vec<u8>> {
 }
 
 /// Bao stream encoding
-pub fn bao(input: &[u8]) -> Result<(Vec<u8>, Hash)> {
+pub fn bao(input: &[u8]) -> Result<(Vec<u8>, Hash), CarbonadoError> {
     trace!("verifiabilitifying");
     let (encoded, hash) = bao_encode(input);
 
@@ -43,7 +45,7 @@ pub fn bao(input: &[u8]) -> Result<(Vec<u8>, Hash)> {
 
 /// Zfec forward error correction encoding
 /// Returns a tuple of encoded bytes, the amount of padding used, and the length of each chunk.
-pub fn zfec(input: &[u8]) -> Result<(Vec<u8>, u32, u32)> {
+pub fn zfec(input: &[u8]) -> Result<(Vec<u8>, u32, u32), CarbonadoError> {
     trace!("forward error correctionifying");
     let input_len = input.len();
     let (padding_len, chunk_len) = calc_padding_len(input_len);
@@ -60,16 +62,17 @@ pub fn zfec(input: &[u8]) -> Result<(Vec<u8>, u32, u32)> {
     let (mut encoded_chunks, zfec_padding) = fec.encode(&padded_input)?;
 
     if zfec_padding != 0 {
-        return Err(anyhow!(
-        "Padding from Zfec should always be zero, since Carbonado adds its own padding. Padding was {zfec_padding}."
-    ));
+        return Err(CarbonadoError::EncodeZfecPaddingError(zfec_padding));
     }
 
     let mut encoded = vec![];
 
     for chunk in &mut encoded_chunks {
         if chunk_len != chunk.data.len() as u32 {
-            return Err(anyhow!("Chunk length should be as calculated. Calculated chunk length was {chunk_len}, but actual chunk length was {}", chunk.data.len()));
+            return Err(CarbonadoError::EncodeInvalidChunkLength(
+                chunk_len,
+                chunk.data.len(),
+            ));
         }
         encoded.append(&mut chunk.data);
     }
@@ -80,7 +83,7 @@ pub fn zfec(input: &[u8]) -> Result<(Vec<u8>, u32, u32)> {
 /// Encode data into Carbonado format, performing compression, encryption, adding error correction codes, and stream verification encoding, in that order.
 ///
 ///  `snap -> ecies -> zfec -> bao`
-pub fn encode(pubkey: &[u8], input: &[u8], format: u8) -> Result<Encoded> {
+pub fn encode(pubkey: &[u8], input: &[u8], format: u8) -> Result<Encoded, CarbonadoError> {
     let input_len = input.len() as u32;
     let format = Format::try_from(format)?;
 
@@ -120,9 +123,8 @@ pub fn encode(pubkey: &[u8], input: &[u8], format: u8) -> Result<Encoded> {
         bytes_ecc = encoded.len() as u32;
         verifiable_slice_count = (bytes_ecc / SLICE_LEN as u32) as u16;
         if verifiable_slice_count % 8 != 0 {
-            return Err(anyhow!(
-                "Verifiable slice count should be evenly divisible by 8. Remainder was {}.",
-                verifiable_slice_count % 8
+            return Err(CarbonadoError::InvalidVerifiableSliceCount(
+                verifiable_slice_count,
             ));
         }
         chunk_slice_count = verifiable_slice_count / 8;

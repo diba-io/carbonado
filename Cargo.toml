@@ -10,7 +10,6 @@ repository = "https://github.com/diba-io/carbonado.git"
 include = ["src/**/*", "LICENSE", "README.md"]
 
 [dependencies]
-anyhow = "1.0.71"
 bao = "0.12.1"
 bech32 = "0.9.1"
 bitmask-enum = "2.1.0"
@@ -28,9 +27,11 @@ secp256k1 = { version = "0.27.0", features = [
 ] }
 serde = "1.0.164"
 snap = "1.1.0"
+thiserror = "1.0"
 
 zfec-rs = "0.1.0"
 
 [dev-dependencies]
+anyhow = "1.0.71"
 rand = "0.8.5"
 wasm-bindgen-test = "0.3.37"
