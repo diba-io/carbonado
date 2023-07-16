@@ -6,6 +6,8 @@
 
 /// For details on Carbonado formats and their uses, see the [Carbonado Format bitmask constant](constants::Format).
 pub mod constants;
+/// Error types
+pub mod error;
 /// File helper methods.
 pub mod file;
 /// See [structs::EncodeInfo](structs::EncodeInfo) for various statistics gatthered in the encoding step.
@@ -15,7 +17,6 @@ pub mod utils;
 
 mod decoding;
 mod encoding;
-mod error;
 
 pub use encoding::encode;
 
