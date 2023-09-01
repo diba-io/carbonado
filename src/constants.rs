@@ -2,9 +2,7 @@ use bitmask_enum::bitmask;
 use serde::{Deserialize, Serialize};
 
 /// "Magic number" used by the Carbonado file format. 12 bytes: "CARBONADO", and a version, 00, plus a newline character
-pub const MAGICNO: [u8; 12] = [
-    b'C', b'A', b'R', b'B', b'O', b'N', b'A', b'D', b'O', b'0', b'0', b'\n',
-];
+pub const MAGICNO: &[u8; 12] = b"CARBONADO00\n";
 
 /// Bao slice length
 pub const SLICE_LEN: u16 = 1024;
