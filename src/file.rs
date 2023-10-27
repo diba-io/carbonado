@@ -70,7 +70,7 @@ impl TryFrom<&File> for Header {
         handle.read_exact(&mut padding_len)?;
         handle.read_exact(&mut metadata)?;
 
-        if magic_no != MAGICNO {
+        if &magic_no != MAGICNO {
             return Err(CarbonadoError::InvalidMagicNumber(format!("{magic_no:#?}")));
         }
 
