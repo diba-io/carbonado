@@ -78,7 +78,7 @@ impl TryFrom<&File> for Header {
         let signature = Signature::from_compact(&signature)?;
 
         // Verify hash against signature
-        signature.verify(&Message::from_slice(&hash)?, &pubkey)?;
+        signature.verify(&Message::from_digest_slice(&hash)?, &pubkey)?;
 
         let hash = bao::Hash::try_from(hash)?;
 
@@ -132,7 +132,7 @@ impl TryFrom<&[u8]> for Header {
         let signature = Signature::from_compact(signature)?;
 
         // Verify hash against signature
-        signature.verify(&Message::from_slice(hash)?, &pubkey)?;
+        signature.verify(&Message::from_digest_slice(hash)?, &pubkey)?;
 
         let hash: [u8; 32] = hash[0..32].try_into()?;
         let hash = bao::Hash::try_from(hash)?;
@@ -180,7 +180,7 @@ impl TryFrom<Bytes> for Header {
         let signature = Signature::from_compact(signature)?;
 
         // Verify hash against signature
-        signature.verify(&Message::from_slice(hash)?, &pubkey)?;
+        signature.verify(&Message::from_digest_slice(hash)?, &pubkey)?;
 
         let hash: [u8; 32] = hash[0..32].try_into()?;
         let hash = bao::Hash::try_from(hash)?;
@@ -228,7 +228,7 @@ impl TryFrom<&Bytes> for Header {
         let signature = Signature::from_compact(signature)?;
 
         // Verify hash against signature
-        signature.verify(&Message::from_slice(hash)?, &pubkey)?;
+        signature.verify(&Message::from_digest_slice(hash)?, &pubkey)?;
 
         let hash: [u8; 32] = hash[0..32].try_into()?;
         let hash = bao::Hash::try_from(hash)?;
@@ -266,7 +266,7 @@ impl Header {
         padding_len: u32,
         metadata: Option<[u8; 8]>,
     ) -> Result<Self, CarbonadoError> {
-        let msg = Message::from_slice(hash)?;
+        let msg = Message::from_digest_slice(hash)?;
         let pubkey = PublicKey::from_slice(pk)?;
         let signature = SecretKey::from_slice(sk)?.sign_ecdsa(msg);
         let hash = decode_bao_hash(hash)?;
