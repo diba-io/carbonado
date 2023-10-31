@@ -1,6 +1,6 @@
 [package]
 name = "carbonado"
-version = "0.3.4"
+version = "0.3.5"
 edition = "2021"
 license = "MIT"
 description = "An apocalypse-resistant data storage format for the truly paranoid."
@@ -23,7 +23,7 @@ libsecp256k1 = { version = "0.7.1", features = ["std"] }
 log = "0.4.19"
 nom = "7.1.3"
 pretty_env_logger = "0.5.0"
-secp256k1 = { version = "0.28.0", features = [
+secp256k1 = { version = "0.27.0", features = [
     "global-context",
     "rand-std",
     "serde",
