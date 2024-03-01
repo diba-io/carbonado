@@ -18,9 +18,17 @@ pub enum CarbonadoError {
     #[error(transparent)]
     HexDecodeError(#[from] hex::FromHexError),
 
-    /// Bech32 error
+    /// Bech32 encode error
     #[error(transparent)]
-    Bech32Error(#[from] bech32::Error),
+    Bech32EncodeError(#[from] bech32::EncodeError),
+
+    /// Bech32 decode error
+    #[error(transparent)]
+    Bech32DecodeError(#[from] bech32::DecodeError),
+
+    /// Bech32 hrp error
+    #[error(transparent)]
+    Bech32HrpError(#[from] bech32::primitives::hrp::Error),
 
     /// snap error
     #[error(transparent)]

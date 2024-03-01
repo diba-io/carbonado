@@ -85,7 +85,7 @@ pub fn zfec(input: &[u8]) -> Result<(Vec<u8>, u32, u32), CarbonadoError> {
 ///  `snap -> ecies -> zfec -> bao`
 pub fn encode(pubkey: &[u8], input: &[u8], format: u8) -> Result<Encoded, CarbonadoError> {
     let input_len = input.len() as u32;
-    let format = Format::try_from(format)?;
+    let format = Format::from(format);
 
     let compressed;
     let encrypted;

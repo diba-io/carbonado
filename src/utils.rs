@@ -1,7 +1,7 @@
 use std::sync::Once;
 
 use bao::Hash;
-use bech32::{decode, encode, FromBase32, ToBase32, Variant};
+use bech32::{decode, encode, Bech32m, Hrp};
 use log::trace;
 
 use crate::{
@@ -55,11 +55,11 @@ pub fn calc_padding_len(input_len: usize) -> (u32, u32) {
 
 /// Helper for encoding data to bech32m.
 pub fn bech32m_encode(hrp: &str, bytes: &[u8]) -> Result<String, CarbonadoError> {
-    Ok(encode(hrp, bytes.to_base32(), Variant::Bech32m)?)
+    Ok(encode::<Bech32m>(Hrp::parse(hrp)?, bytes)?)
 }
 
 /// Helper for decoding bech32-encoded data.
-pub fn bech32_decode(bech32_str: &str) -> Result<(String, Vec<u8>, Variant), CarbonadoError> {
-    let (hrp, words, variant) = decode(bech32_str)?;
-    Ok((hrp, Vec::<u8>::from_base32(&words)?, variant))
+pub fn bech32_decode(bech32_str: &str) -> Result<(String, Vec<u8>), CarbonadoError> {
+    let (hrp, words) = decode(bech32_str)?;
+    Ok((hrp.to_string(), words))
 }
