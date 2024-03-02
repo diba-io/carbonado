@@ -67,6 +67,12 @@ pub fn bech32_decode(bech32_str: &str) -> Result<(String, Vec<u8>), CarbonadoErr
 pub fn pub_keyed_hash(ss: &str, bytes: &[u8]) -> Result<String, CarbonadoError> {
     let key = hex::decode(ss)?;
     let key_bytes: [u8; 32] = key[0..32].try_into()?;
-    let pub_keyed_hash = blake3::keyed_hash(&key_bytes, bytes).to_hex().to_string();
+    let secp = secp256k1::Secp256k1::new();
+    let secret_key = secp256k1::SecretKey::from_slice(key_bytes.as_slice())?;
+    let pk = secret_key.public_key(&secp);
+    let (pk, _parity) = pk.x_only_public_key();
+    let pub_keyed_hash = blake3::keyed_hash(&pk.serialize(), bytes)
+        .to_hex()
+        .to_string();
     Ok(pub_keyed_hash)
 }
