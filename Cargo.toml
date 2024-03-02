@@ -12,6 +12,7 @@ include = ["src/**/*", "LICENSE", "README.md"]
 [dependencies]
 bao = "0.12.1"
 bech32 = "0.11.0"
+blake3 = "1.5.0"
 bitmask-enum = "2.1.0"
 bytes = "1.4.0"
 ecies = { version = "0.2.6", default-features = false, features = [

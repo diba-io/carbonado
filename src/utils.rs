@@ -63,3 +63,10 @@ pub fn bech32_decode(bech32_str: &str) -> Result<(String, Vec<u8>), CarbonadoErr
     let (hrp, words) = decode(bech32_str)?;
     Ok((hrp.to_string(), words))
 }
+
+pub fn pub_keyed_hash(ss: &str, bytes: &[u8]) -> Result<String, CarbonadoError> {
+    let key = hex::decode(ss)?;
+    let key_bytes: [u8; 32] = key[0..32].try_into()?;
+    let pub_keyed_hash = blake3::keyed_hash(&key_bytes, bytes).to_hex().to_string();
+    Ok(pub_keyed_hash)
+}

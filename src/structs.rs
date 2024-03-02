@@ -47,7 +47,10 @@ pub struct EncodeInfo {
 /// i.e., Encoded(encoded_bytes, bao_hash, encode_info)
 pub struct Encoded(pub Vec<u8>, pub bao::Hash, pub EncodeInfo);
 
-pub struct Secp256k1PubKey(pub secp256k1::PublicKey);
+pub struct Secp256k1PubKey {
+    pub pk: secp256k1::PublicKey,
+    pub x_only_pk: [u8; 32],
+}
 
 impl TryFrom<&str> for Secp256k1PubKey {
     type Error = CarbonadoError;
@@ -71,27 +74,43 @@ impl TryFrom<&str> for Secp256k1PubKey {
             _ => return Err(CarbonadoError::IncorrectPubKeyFormat),
         };
 
-        Ok(Self(pk))
+        let (x_only_pk, _) = pk.x_only_public_key();
+        let x_only_pk = x_only_pk.serialize();
+
+        Ok(Self { pk, x_only_pk })
     }
 }
 
 impl Display for Secp256k1PubKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let Self(pk) = self;
+        let Self { pk, .. } = self;
 
         f.write_str(&pk.to_string())
     }
 }
 
+impl AsRef<[u8; 32]> for Secp256k1PubKey {
+    fn as_ref(&self) -> &[u8; 32] {
+        &self.x_only_pk
+    }
+}
+
 impl Secp256k1PubKey {
+    pub fn new(pk: secp256k1::PublicKey) -> Self {
+        let (x_only_pk, _) = pk.x_only_public_key();
+        let x_only_pk = x_only_pk.serialize();
+
+        Self { pk, x_only_pk }
+    }
+
     pub fn to_bytes(&self) -> Vec<u8> {
-        let Self(pk) = self;
+        let Self { pk, .. } = self;
 
         pk.serialize().to_vec()
     }
 
     pub fn into_inner(&self) -> secp256k1::PublicKey {
-        let Self(pk) = self;
+        let Self { pk, .. } = self;
 
         pk.to_owned()
     }
