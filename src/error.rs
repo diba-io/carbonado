@@ -18,9 +18,17 @@ pub enum CarbonadoError {
     #[error(transparent)]
     HexDecodeError(#[from] hex::FromHexError),
 
-    /// Bech32 error
+    /// Bech32 encode error
     #[error(transparent)]
-    Bech32Error(#[from] bech32::Error),
+    Bech32EncodeError(#[from] bech32::EncodeError),
+
+    /// Bech32 decode error
+    #[error(transparent)]
+    Bech32DecodeError(#[from] bech32::DecodeError),
+
+    /// Bech32 hrp error
+    #[error(transparent)]
+    Bech32HrpError(#[from] bech32::primitives::hrp::Error),
 
     /// snap error
     #[error(transparent)]
@@ -41,6 +49,14 @@ pub enum CarbonadoError {
     /// zfec_rs error
     #[error(transparent)]
     ZfecError(#[from] zfec_rs::Error),
+
+    /// nostr secp256k1 error
+    #[error(transparent)]
+    NostrSecp256k1Error(#[from] nostr::secp256k1::Error),
+
+    /// nostr NIP-19 / Bech32 error
+    #[error(transparent)]
+    NostrNip19Error(#[from] nostr::nips::nip19::Error),
 
     /// An uneven number of input bytes were provided for zfec chunks
     #[error("Input bytes must divide evenly over number of zfec chunks.")]
@@ -101,4 +117,8 @@ pub enum CarbonadoError {
     /// Invalid header length calculation
     #[error("Invalid header length calculation")]
     InvalidHeaderLength,
+
+    /// Invalid header length calculation
+    #[error("Incorrect public key format")]
+    IncorrectPubKeyFormat,
 }

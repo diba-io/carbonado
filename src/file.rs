@@ -80,9 +80,9 @@ impl TryFrom<&File> for Header {
         // Verify hash against signature
         signature.verify(&Message::from_digest_slice(&hash)?, &pubkey)?;
 
-        let hash = bao::Hash::try_from(hash)?;
+        let hash = bao::Hash::from(hash);
 
-        let format = Format::try_from(format[0])?;
+        let format = Format::from(format[0]);
         let chunk_index = u8::from_le_bytes(chunk_index);
         let encoded_len = u32::from_le_bytes(encoded_len);
         let padding_len = u32::from_le_bytes(padding_len);
@@ -135,9 +135,9 @@ impl TryFrom<&[u8]> for Header {
         signature.verify(&Message::from_digest_slice(hash)?, &pubkey)?;
 
         let hash: [u8; 32] = hash[0..32].try_into()?;
-        let hash = bao::Hash::try_from(hash)?;
+        let hash = bao::Hash::from(hash);
 
-        let format = Format::try_from(format)?;
+        let format = Format::from(format);
 
         Ok(Header {
             pubkey,
@@ -183,9 +183,9 @@ impl TryFrom<Bytes> for Header {
         signature.verify(&Message::from_digest_slice(hash)?, &pubkey)?;
 
         let hash: [u8; 32] = hash[0..32].try_into()?;
-        let hash = bao::Hash::try_from(hash)?;
+        let hash = bao::Hash::from(hash);
 
-        let format = Format::try_from(format)?;
+        let format = Format::from(format);
 
         Ok(Header {
             pubkey,
@@ -231,9 +231,9 @@ impl TryFrom<&Bytes> for Header {
         signature.verify(&Message::from_digest_slice(hash)?, &pubkey)?;
 
         let hash: [u8; 32] = hash[0..32].try_into()?;
-        let hash = bao::Hash::try_from(hash)?;
+        let hash = bao::Hash::from(hash);
 
-        let format = Format::try_from(format)?;
+        let format = Format::from(format);
 
         Ok(Header {
             pubkey,
@@ -416,7 +416,7 @@ pub fn encode(
 
     let Encoded(mut encoded, hash, encode_info) = encoding::encode(&pubkey, input, level)?;
 
-    let format = Format::try_from(level)?;
+    let format = Format::from(level);
     let header = Header::new(
         sk,
         &pubkey,

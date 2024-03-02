@@ -84,7 +84,7 @@ pub fn decode(
     padding: u32,
     format: u8,
 ) -> Result<Vec<u8>, CarbonadoError> {
-    let format = Format::try_from(format)?;
+    let format = Format::from(format);
 
     let verified = if format.contains(Format::Bao) {
         bao(input, hash)?

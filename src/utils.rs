@@ -1,7 +1,7 @@
 use std::sync::Once;
 
 use bao::Hash;
-use bech32::{decode, encode, FromBase32, ToBase32, Variant};
+use bech32::{decode, encode, Bech32m, Hrp};
 use log::trace;
 
 use crate::{
@@ -55,11 +55,24 @@ pub fn calc_padding_len(input_len: usize) -> (u32, u32) {
 
 /// Helper for encoding data to bech32m.
 pub fn bech32m_encode(hrp: &str, bytes: &[u8]) -> Result<String, CarbonadoError> {
-    Ok(encode(hrp, bytes.to_base32(), Variant::Bech32m)?)
+    Ok(encode::<Bech32m>(Hrp::parse(hrp)?, bytes)?)
 }
 
 /// Helper for decoding bech32-encoded data.
-pub fn bech32_decode(bech32_str: &str) -> Result<(String, Vec<u8>, Variant), CarbonadoError> {
-    let (hrp, words, variant) = decode(bech32_str)?;
-    Ok((hrp, Vec::<u8>::from_base32(&words)?, variant))
+pub fn bech32_decode(bech32_str: &str) -> Result<(String, Vec<u8>), CarbonadoError> {
+    let (hrp, words) = decode(bech32_str)?;
+    Ok((hrp.to_string(), words))
+}
+
+pub fn pub_keyed_hash(ss: &str, bytes: &[u8]) -> Result<String, CarbonadoError> {
+    let key = hex::decode(ss)?;
+    let key_bytes: [u8; 32] = key[0..32].try_into()?;
+    let secp = secp256k1::Secp256k1::new();
+    let secret_key = secp256k1::SecretKey::from_slice(key_bytes.as_slice())?;
+    let pk = secret_key.public_key(&secp);
+    let (pk, _parity) = pk.x_only_public_key();
+    let pub_keyed_hash = blake3::keyed_hash(&pk.serialize(), bytes)
+        .to_hex()
+        .to_string();
+    Ok(pub_keyed_hash)
 }
