@@ -27,3 +27,6 @@ pub use decoding::extract_slice;
 pub use decoding::verify_slice;
 
 pub use decoding::scrub;
+
+pub use bao;
+pub use secp256k1;

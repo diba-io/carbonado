@@ -5,7 +5,7 @@ use std::{
 };
 
 use bao::{encode::Encoder, Hash};
-use bech32::{decode, encode_to_fmt, Bech32m, Hrp};
+use bech32::{decode, encode, Bech32m, Hrp};
 use log::trace;
 
 use crate::{
@@ -58,18 +58,14 @@ pub fn calc_padding_len(input_len: usize) -> (u32, u32) {
 }
 
 /// Helper for encoding data to bech32m.
-pub fn bech32m_encode(hrp_str: &str, bytes: &[u8]) -> Result<String, CarbonadoError> {
-    let hrp = Hrp::parse(hrp_str).map_err(CarbonadoError::InvalidHrp)?;
-    let mut buf = String::new();
-    encode_to_fmt::<Bech32m, String>(&mut buf, hrp, bytes)?;
-    Ok(buf)
+pub fn bech32m_encode(hrp: &str, bytes: &[u8]) -> Result<String, CarbonadoError> {
+    Ok(encode::<Bech32m>(Hrp::parse(hrp)?, bytes)?)
 }
 
 /// Helper for decoding bech32-encoded data.
 pub fn bech32_decode(bech32_str: &str) -> Result<(String, Vec<u8>), CarbonadoError> {
-    let (hrp, data) = decode(bech32_str).map_err(CarbonadoError::Bech32DecodeError)?;
-    let hrp_str = hrp.to_string();
-    Ok((hrp_str, data))
+    let (hrp, words) = decode(bech32_str)?;
+    Ok((hrp.to_string(), words))
 }
 
 #[derive(Clone, Debug)]
