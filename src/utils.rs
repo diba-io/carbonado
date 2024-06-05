@@ -1,6 +1,10 @@
-use std::sync::Once;
+use std::{
+    fmt,
+    io::{Cursor, Write},
+    sync::{Arc, Once, RwLock},
+};
 
-use bao::Hash;
+use bao::{encode::Encoder, Hash};
 use bech32::{decode, encode_to_fmt, Bech32m, Hrp};
 use log::trace;
 
@@ -66,4 +70,72 @@ pub fn bech32_decode(bech32_str: &str) -> Result<(String, Vec<u8>), CarbonadoErr
     let (hrp, data) = decode(bech32_str).map_err(CarbonadoError::Bech32DecodeError)?;
     let hrp_str = hrp.to_string();
     Ok((hrp_str, data))
+}
+
+#[derive(Clone, Debug)]
+pub struct BaoHash(pub bao::Hash);
+
+impl BaoHash {
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let Self(hash) = self;
+
+        hash.as_bytes().to_vec()
+    }
+}
+
+impl fmt::Display for BaoHash {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let Self(hash) = self;
+
+        f.write_str(&hash.to_string())
+    }
+}
+
+impl From<&[u8]> for BaoHash {
+    fn from(value: &[u8]) -> Self {
+        let mut hash = [0_u8; 32];
+        hash.copy_from_slice(&value[0..32]);
+        Self(bao::Hash::from(hash))
+    }
+}
+
+impl From<bao::Hash> for BaoHash {
+    fn from(hash: bao::Hash) -> Self {
+        Self(hash)
+    }
+}
+
+/// A threadsafe bao hasher similar to that provided by blake3
+pub struct BaoHasher {
+    encoder: Arc<RwLock<Encoder<Cursor<Vec<u8>>>>>,
+}
+
+impl BaoHasher {
+    pub fn new() -> Arc<Self> {
+        let data = Vec::new();
+        let cursor = Cursor::new(data.clone());
+        let encoder = Encoder::new(cursor);
+
+        let bao_hasher = Self {
+            encoder: Arc::new(RwLock::new(encoder)),
+        };
+
+        Arc::new(bao_hasher)
+    }
+
+    pub fn update(&self, buf: &[u8]) {
+        let mut encoder = self.encoder.write().expect("encoder write lock");
+        encoder.write_all(buf).expect("write to encoder");
+    }
+
+    pub fn finalize(&self) -> BaoHash {
+        let mut encoder = self.encoder.write().expect("encoder read lock");
+        BaoHash::from(encoder.finalize().expect("finalize bao hash"))
+    }
+
+    pub fn read_all(&self) -> Vec<u8> {
+        let encoder = self.encoder.write().expect("encoder read lock");
+        let data = encoder.clone().into_inner();
+        data.into_inner().to_vec()
+    }
 }
