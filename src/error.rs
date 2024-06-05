@@ -18,9 +18,17 @@ pub enum CarbonadoError {
     #[error(transparent)]
     HexDecodeError(#[from] hex::FromHexError),
 
-    /// Bech32 error
+    /// Bech32 encode error
     #[error(transparent)]
-    Bech32Error(#[from] bech32::Error),
+    Bech32EncodeError(#[from] bech32::EncodeError),
+
+    /// Bech32 decode error
+    #[error(transparent)]
+    Bech32DecodeError(#[from] bech32::DecodeError),
+
+    /// Bech32 human readable part error
+    #[error(transparent)]
+    InvalidHrp(#[from] bech32::primitives::hrp::Error),
 
     /// snap error
     #[error(transparent)]
@@ -32,7 +40,7 @@ pub enum CarbonadoError {
 
     /// ecies error
     #[error(transparent)]
-    EciesError(#[from] ecies::SecpError),
+    EciesError(#[from] libsecp256k1_core::Error),
 
     /// bao decode error
     #[error(transparent)]

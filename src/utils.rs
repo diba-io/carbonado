@@ -1,7 +1,7 @@
 use std::sync::Once;
 
 use bao::Hash;
-use bech32::{decode, encode, FromBase32, ToBase32, Variant};
+use bech32::{decode, encode_to_fmt, Bech32m, Hrp};
 use log::trace;
 
 use crate::{
@@ -54,12 +54,16 @@ pub fn calc_padding_len(input_len: usize) -> (u32, u32) {
 }
 
 /// Helper for encoding data to bech32m.
-pub fn bech32m_encode(hrp: &str, bytes: &[u8]) -> Result<String, CarbonadoError> {
-    Ok(encode(hrp, bytes.to_base32(), Variant::Bech32m)?)
+pub fn bech32m_encode(hrp_str: &str, bytes: &[u8]) -> Result<String, CarbonadoError> {
+    let hrp = Hrp::parse(hrp_str).map_err(CarbonadoError::InvalidHrp)?;
+    let mut buf = String::new();
+    encode_to_fmt::<Bech32m, String>(&mut buf, hrp, bytes)?;
+    Ok(buf)
 }
 
 /// Helper for decoding bech32-encoded data.
-pub fn bech32_decode(bech32_str: &str) -> Result<(String, Vec<u8>, Variant), CarbonadoError> {
-    let (hrp, words, variant) = decode(bech32_str)?;
-    Ok((hrp, Vec::<u8>::from_base32(&words)?, variant))
+pub fn bech32_decode(bech32_str: &str) -> Result<(String, Vec<u8>), CarbonadoError> {
+    let (hrp, data) = decode(bech32_str).map_err(CarbonadoError::Bech32DecodeError)?;
+    let hrp_str = hrp.to_string();
+    Ok((hrp_str, data))
 }

@@ -101,7 +101,7 @@ fn codec(path: &str) -> Result<()> {
     assert_eq!(decoded, input, "Decoded output is same as encoded input");
 
     let carbonado_level = 15;
-    let format = Format::try_from(carbonado_level)?;
+    let format = Format::from(carbonado_level);
     let header = Header::new(
         &sk.secret_bytes(),
         &pk.serialize(),
@@ -121,6 +121,7 @@ fn codec(path: &str) -> Result<()> {
         .read(true)
         .write(true)
         .create(true)
+        .truncate(true)
         .open(&file_path)?;
     file.write_all(&header_bytes)?;
     file.write_all(&encoded)?;
