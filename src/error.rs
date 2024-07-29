@@ -40,7 +40,7 @@ pub enum CarbonadoError {
 
     /// ecies error
     #[error(transparent)]
-    EciesError(#[from] ecies::SecpError),
+    EciesError(#[from] libsecp256k1_core::Error),
 
     /// bao decode error
     #[error(transparent)]

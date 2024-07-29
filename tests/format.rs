@@ -63,6 +63,7 @@ fn format() -> Result<()> {
         .read(true)
         .write(true)
         .create(true)
+        .truncate(true)
         .open(file_path)?;
     file.write_all(&header_bytes)?;
     file.write_all(&encoded)?;
