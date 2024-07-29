@@ -94,10 +94,6 @@ pub enum CarbonadoError {
     #[error("Verifiable slice count should be evenly divisible by 8. Remainder was {0}.")]
     InvalidVerifiableSliceCount(u16),
 
-    /// secp256k1 error
-    #[error(transparent)]
-    Secp256k1Error(#[from] secp256k1::Error),
-
     /// Invalid magic number
     #[error("File header lacks Carbonado magic number and may not be a proper Carbonado file. Magic number found was {0}.")]
     InvalidMagicNumber(String),

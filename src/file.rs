@@ -11,7 +11,7 @@ use nom::{
     number::complete::{le_u32, le_u8},
     IResult,
 };
-use secp256k1::{ecdsa::Signature, Message, PublicKey, SecretKey};
+use secp256k1::{schnorr::Signature, Keypair, Message, PublicKey, Secp256k1, SecretKey};
 
 use crate::{
     constants::{Format, MAGICNO},
@@ -75,10 +75,11 @@ impl TryFrom<&File> for Header {
         }
 
         let pubkey = PublicKey::from_slice(&pubkey)?;
-        let signature = Signature::from_compact(&signature)?;
+        let signature = Signature::from_slice(&signature)?;
 
         // Verify hash against signature
-        signature.verify(&Message::from_digest_slice(&hash)?, &pubkey)?;
+        let (x_only_pubkey, _) = pubkey.x_only_public_key();
+        signature.verify(&Message::from_digest_slice(&hash)?, &x_only_pubkey)?;
 
         let hash = bao::Hash::from(hash);
 
@@ -129,10 +130,11 @@ impl TryFrom<&[u8]> for Header {
         }
 
         let pubkey = PublicKey::from_slice(pubkey)?;
-        let signature = Signature::from_compact(signature)?;
+        let signature = Signature::from_slice(signature)?;
 
         // Verify hash against signature
-        signature.verify(&Message::from_digest_slice(hash)?, &pubkey)?;
+        let (x_only_pubkey, _) = pubkey.x_only_public_key();
+        signature.verify(&Message::from_digest_slice(hash)?, &x_only_pubkey)?;
 
         let hash: [u8; 32] = hash[0..32].try_into()?;
         let hash = bao::Hash::from(hash);
@@ -177,10 +179,11 @@ impl TryFrom<Bytes> for Header {
         }
 
         let pubkey = PublicKey::from_slice(pubkey)?;
-        let signature = Signature::from_compact(signature)?;
+        let signature = Signature::from_slice(signature)?;
 
         // Verify hash against signature
-        signature.verify(&Message::from_digest_slice(hash)?, &pubkey)?;
+        let (x_only_pubkey, _) = pubkey.x_only_public_key();
+        signature.verify(&Message::from_digest_slice(hash)?, &x_only_pubkey)?;
 
         let hash: [u8; 32] = hash[0..32].try_into()?;
         let hash = bao::Hash::from(hash);
@@ -225,10 +228,11 @@ impl TryFrom<&Bytes> for Header {
         }
 
         let pubkey = PublicKey::from_slice(pubkey)?;
-        let signature = Signature::from_compact(signature)?;
+        let signature = Signature::from_slice(signature)?;
 
         // Verify hash against signature
-        signature.verify(&Message::from_digest_slice(hash)?, &pubkey)?;
+        let (x_only_pubkey, _) = pubkey.x_only_public_key();
+        signature.verify(&Message::from_digest_slice(hash)?, &x_only_pubkey)?;
 
         let hash: [u8; 32] = hash[0..32].try_into()?;
         let hash = bao::Hash::from(hash);
@@ -268,7 +272,8 @@ impl Header {
     ) -> Result<Self, CarbonadoError> {
         let msg = Message::from_digest_slice(hash)?;
         let pubkey = PublicKey::from_slice(pk)?;
-        let signature = SecretKey::from_slice(sk)?.sign_ecdsa(msg);
+        let secp = Secp256k1::new();
+        let signature = Keypair::from_seckey_slice(&secp, sk)?.sign_schnorr(msg);
         let hash = decode_bao_hash(hash)?;
 
         Ok(Header {
@@ -293,7 +298,7 @@ impl Header {
         if hash_bytes.len() != 32 {
             return Err(CarbonadoError::HashBytesLengthError);
         }
-        let mut signature_bytes = self.signature.serialize_compact().to_vec(); // 64 bytes
+        let mut signature_bytes = self.signature.serialize().to_vec(); // 64 bytes
         if signature_bytes.len() != 64 {
             return Err(CarbonadoError::UnexpectedSignatureBytesLength(
                 signature_bytes.len(),

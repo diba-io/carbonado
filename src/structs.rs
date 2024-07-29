@@ -56,22 +56,35 @@ impl TryFrom<&str> for Secp256k1PubKey {
     type Error = CarbonadoError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let pk = match value.get(0..2).expect("key is at least 2 characters long") {
-            "+n" => secp256k1::PublicKey::from_x_only_public_key(
+        let pk = match (
+            value.get(0..2).expect("key is at least 2 characters long"),
+            value.len(),
+        ) {
+            ("+n", _) => secp256k1::PublicKey::from_x_only_public_key(
                 secp256k1::XOnlyPublicKey::from_slice(
                     &PublicKey::from_bech32(value.get(1..).unwrap())?.to_bytes(),
                 )?,
                 secp256k1::Parity::Even,
             ),
-            "-n" => secp256k1::PublicKey::from_x_only_public_key(
+            ("-n", _) => secp256k1::PublicKey::from_x_only_public_key(
                 secp256k1::XOnlyPublicKey::from_slice(
                     &PublicKey::from_bech32(value.get(1..).unwrap())?.to_bytes(),
                 )?,
                 secp256k1::Parity::Odd,
             ),
-            "02" => secp256k1::PublicKey::from_str(value)?,
-            "03" => secp256k1::PublicKey::from_str(value)?,
-            _ => return Err(CarbonadoError::IncorrectPubKeyFormat),
+            ("np", _) => secp256k1::PublicKey::from_x_only_public_key(
+                secp256k1::XOnlyPublicKey::from_slice(&PublicKey::from_bech32(value)?.to_bytes())?,
+                secp256k1::Parity::Odd,
+            ),
+            ("02", 66) => secp256k1::PublicKey::from_str(value)?,
+            ("03", 66) => secp256k1::PublicKey::from_str(value)?,
+            (_, 64) => {
+                let value = "03".to_owned() + value;
+                secp256k1::PublicKey::from_str(&value)?
+            }
+            _ => {
+                return Err(CarbonadoError::IncorrectPubKeyFormat);
+            }
         };
 
         let (x_only_pk, _) = pk.x_only_public_key();
@@ -133,5 +146,21 @@ fn test_pubkey_decode() {
     assert_eq!(
         result.unwrap().to_string(),
         "03a8e76c3ace7829f9ee44cf9293309e21a1824bf1e57631d00685a1ed0b0bd8a2"
+    );
+    let result = Secp256k1PubKey::try_from(
+        "a8e76c3ace7829f9ee44cf9293309e21a1824bf1e57631d00685a1ed0b0bd8a2",
+    );
+    assert!(result.is_ok());
+    assert_eq!(
+        result.unwrap().to_string(),
+        "03a8e76c3ace7829f9ee44cf9293309e21a1824bf1e57631d00685a1ed0b0bd8a2"
+    );
+    let result = Secp256k1PubKey::try_from(
+        "npub1qqqqqqqrxtrcx8vut2vlrqa0c2qn5mmf59hdmflkls8dsyg9vmnqsclxwk",
+    );
+    assert!(result.is_ok());
+    assert_eq!(
+        result.unwrap().to_string(),
+        "03000000000332c7831d9c5a99f183afc2813a6f69a16edda7f6fc0ed8110566e6"
     );
 }
